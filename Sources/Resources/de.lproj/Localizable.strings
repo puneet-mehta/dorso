@@ -212,3 +212,25 @@
 // MARK: - Common
 
 "common.cancel" = "Abbrechen";
+
+// MARK: - Eye Care
+
+"nudge.posture" = "Sitz gerade";
+"nudge.blink" = "Blinzle mit den Augen";
+"nudge.rest.countdown" = "Schau 6 m in die Ferne — %@";
+"settings.eyeCare" = "Augenpflege";
+"settings.eyeCare.help" = "Erinnerungen zum Blinzeln und zu Augenpausen bei langen Bildschirmsitzungen. Alle Verarbeitung bleibt auf deinem Mac.";
+"settings.eyeCare.enable" = "Augenpflege aktivieren";
+"settings.eyeCare.blinkNudge" = "Blinzel-Erinnerungen";
+"settings.eyeCare.blinkNudge.help" = "Erkennt über die Kamera, wenn du ohne zu blinzeln starrst, und zeigt einen sanften Hinweis.";
+"settings.eyeCare.blinkNudge.cameraOnly" = "Verfügbar bei Kamera-Tracking";
+"settings.eyeCare.blinkSensitivity" = "Empfindlichkeit";
+"settings.eyeCare.blinkSensitivity.low" = "Niedrig";
+"settings.eyeCare.blinkSensitivity.medium" = "Mittel";
+"settings.eyeCare.blinkSensitivity.high" = "Hoch";
+"settings.eyeCare.rest" = "20-20-20-Pausen";
+"settings.eyeCare.rest.help" = "Schau alle 20 Minuten Bildschirmzeit für 20 Sekunden auf etwas in 6 Metern Entfernung.";
+"settings.eyeCare.restInterval" = "Pausenintervall";
+"settings.eyeCare.restInterval.value" = "%d Min.";
+"analytics.eyeBreaks" = "Augenpausen";
+"analytics.blinkNudges" = "Blinzel-Hinweise";

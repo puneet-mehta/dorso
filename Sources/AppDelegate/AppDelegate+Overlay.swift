@@ -54,6 +54,7 @@ extension AppDelegate {
                 syncWarningOverlaySettings()
                 warningOverlayManager.rebuildOverlayWindows()
             }
+            nudgeLabelManager.rebuildWindows()
         }
     }
 
@@ -108,12 +109,44 @@ extension AppDelegate {
         warningOverlayManager.updateColor(color)
     }
 
+    // MARK: - Eye Care Nudge HUD
+
+    /// Derive and render the nudge HUD label from current store state.
+    func updateNudgeHUD() {
+        let (restPhase, restDuration, blinkIntensity) = trackingStore.withState {
+            ($0.eyeCareState.restPhase,
+             $0.eyeCareConfig.restDurationSeconds,
+             $0.eyeCareState.blinkNudgeIntensity)
+        }
+        let hud = NudgeHUDState.derive(
+            postureIntensity: postureWarningIntensity,
+            blinkIntensity: blinkIntensity,
+            restPhase: restPhase,
+            now: Date(),
+            restDuration: restDuration
+        )
+        nudgeLabelManager.render(hud)
+    }
+
+    /// Dispatch `.eyeCareTick` from the 0.033s render timer at most once per
+    /// wall-clock second while eye care is enabled and the app is active.
+    func dispatchEyeCareTickIfDue() {
+        guard eyeCareConfig.eyeCareEnabled, state.isActive else { return }
+        let now = Date()
+        guard now.timeIntervalSince(lastEyeCareTickTime) >= 1.0 else { return }
+        lastEyeCareTickTime = now
+        applyTrackingAction(.eyeCareTick(now: now, isMarketingMode: isMarketingMode))
+    }
+
     func updateBlur() {
         let privacyBlurIntensity: CGFloat = isCurrentlyAway ? 1.0 : 0.0
+        // Posture and blink nudges share the warning channel; the stronger
+        // signal drives the visual, the HUD label names the cause.
+        let warningIntensity = max(postureWarningIntensity, blinkNudgeIntensity)
 
         switch activeWarningMode {
         case .blur:
-            let combinedIntensity = max(privacyBlurIntensity, postureWarningIntensity)
+            let combinedIntensity = max(privacyBlurIntensity, warningIntensity)
             targetBlurRadius = Int32(combinedIntensity * 64)
             warningOverlayManager.targetIntensity = 0
         case .none:
@@ -121,8 +154,14 @@ extension AppDelegate {
             warningOverlayManager.targetIntensity = 0
         case .glow, .border, .solid:
             targetBlurRadius = Int32(privacyBlurIntensity * 64)
-            warningOverlayManager.targetIntensity = postureWarningIntensity
+            warningOverlayManager.targetIntensity = warningIntensity
         }
+
+        // The cause label follows the warning signals on every tick (cheap:
+        // the label manager no-ops while its text is unchanged). This is what
+        // keeps posture-only warnings labeled too, and the rest countdown
+        // ticking.
+        updateNudgeHUD()
 
         // Skip work if nothing is changing
         let blurNeedsUpdate = currentBlurRadius != targetBlurRadius

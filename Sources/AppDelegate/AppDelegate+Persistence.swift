@@ -35,6 +35,12 @@ extension AppDelegate {
            let data = try? JSONEncoder().encode(airPodsCalibration) {
             defaults.set(data, forKey: SettingsKeys.airPodsCalibration)
         }
+        let eyeCare = eyeCareConfig
+        defaults.set(eyeCare.eyeCareEnabled, forKey: SettingsKeys.eyeCareEnabled)
+        defaults.set(eyeCare.blinkNudgeEnabled, forKey: SettingsKeys.eyeCareBlinkNudge)
+        defaults.set(eyeCare.blinkSensitivity.rawValue, forKey: SettingsKeys.eyeCareBlinkSensitivity)
+        defaults.set(eyeCare.restReminderEnabled, forKey: SettingsKeys.eyeCareRestReminder)
+        defaults.set(Int(eyeCare.restIntervalSeconds / 60), forKey: SettingsKeys.eyeCareRestIntervalMinutes)
     }
 
     func loadSettings() {
@@ -83,6 +89,29 @@ extension AppDelegate {
             let modifiers = NSEvent.ModifierFlags(rawValue: UInt(defaults.integer(forKey: SettingsKeys.toggleShortcutModifiers)))
             toggleShortcut = KeyboardShortcut(keyCode: keyCode, modifiers: modifiers)
         }
+
+        var eyeCare = EyeCareConfig()
+        eyeCare.eyeCareEnabled = defaults.bool(forKey: SettingsKeys.eyeCareEnabled)
+        if defaults.object(forKey: SettingsKeys.eyeCareBlinkNudge) != nil {
+            eyeCare.blinkNudgeEnabled = defaults.bool(forKey: SettingsKeys.eyeCareBlinkNudge)
+        }
+        if let raw = defaults.string(forKey: SettingsKeys.eyeCareBlinkSensitivity),
+           let sensitivity = BlinkSensitivity(rawValue: raw) {
+            eyeCare.blinkSensitivity = sensitivity
+        }
+        if defaults.object(forKey: SettingsKeys.eyeCareRestReminder) != nil {
+            eyeCare.restReminderEnabled = defaults.bool(forKey: SettingsKeys.eyeCareRestReminder)
+        }
+        if defaults.object(forKey: SettingsKeys.eyeCareRestIntervalMinutes) != nil {
+            let minutes = max(10, min(40, defaults.integer(forKey: SettingsKeys.eyeCareRestIntervalMinutes)))
+            eyeCare.restIntervalSeconds = TimeInterval(minutes * 60)
+        }
+        // Debug affordance: short cycles for manual testing of the 20-20-20 flow.
+        if CommandLine.arguments.contains("--eye-care-debug") {
+            eyeCare.restIntervalSeconds = 60
+            eyeCare.restDurationSeconds = 10
+        }
+        applyTrackingAction(.setEyeCareConfiguration(eyeCare))
     }
 
     func saveProfile(forKey key: String, data: ProfileData) {

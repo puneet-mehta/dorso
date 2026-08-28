@@ -110,6 +110,20 @@ struct AnalyticsView: View {
                         icon: "exclamationmark.circle",
                         color: .red
                     )
+
+                    AnalyticsStatCard(
+                        title: L("analytics.eyeBreaks"),
+                        value: "\(manager.todayStats.restBreaksCompleted)",
+                        icon: "eye",
+                        color: .green
+                    )
+
+                    AnalyticsStatCard(
+                        title: L("analytics.blinkNudges"),
+                        value: "\(manager.todayStats.blinkNudgeCount)",
+                        icon: "eye.trianglebadge.exclamationmark",
+                        color: .purple
+                    )
                 }
                 .frame(width: 180)
 

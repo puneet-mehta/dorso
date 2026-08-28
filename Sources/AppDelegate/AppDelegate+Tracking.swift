@@ -40,6 +40,7 @@ extension AppDelegate {
             clearBlur()
             warningOverlayManager.targetIntensity = 0
             warningOverlayManager.updateWarning()
+            nudgeLabelManager.hide()
         }
         if newState == .monitoring {
             applyActiveSettingsProfile()
@@ -57,6 +58,11 @@ extension AppDelegate {
 
         let activeSource = activeTrackingSource
         let shouldRun = PostureEngine.shouldDetectorRun(for: state, trackingSource: activeSource)
+
+        // Blink detection rides the camera only while camera tracking is the
+        // active source and the user opted in.
+        cameraDetector.isBlinkDetectionEnabled =
+            eyeCareConfig.blinkNudgeActive && activeSource == .camera
 
         // Always stop the other detector so in-flight starts are cancelled
         // even if that detector has not flipped isActive=true yet.
@@ -151,6 +157,12 @@ extension AppDelegate {
             }
         }
 
+        cameraDetector.onBlinkActivity = { [weak self] sample in
+            Task { @MainActor in
+                await self?.handleBlinkActivity(sample)
+            }
+        }
+
         // Configure AirPods detector
         airPodsDetector.onPostureReading = { [weak self] reading in
             Task { @MainActor in
@@ -191,6 +203,13 @@ extension AppDelegate {
     func handleAwayStateChange(_ isAway: Bool) async {
         await sendTrackingAction(
             .awayStateChanged(isAway, isMarketingMode: isMarketingMode),
+            applyStateTransition: false
+        )
+    }
+
+    private func handleBlinkActivity(_ sample: BlinkActivitySample) async {
+        await sendTrackingAction(
+            .blinkActivityReceived(sample, isMarketingMode: isMarketingMode),
             applyStateTransition: false
         )
     }
@@ -307,6 +326,16 @@ extension AppDelegate {
         pauseOnTheGo = isEnabled
         saveSettings()
         await sendTrackingAction(.pauseOnTheGoSettingChanged(isEnabled: isEnabled))
+    }
+
+    /// Apply a change to the eye care configuration: dispatch to the store,
+    /// persist, and re-sync the camera's blink detection gate.
+    func updateEyeCareConfig(_ transform: (inout EyeCareConfig) -> Void) async {
+        var config = eyeCareConfig
+        transform(&config)
+        await sendTrackingAction(.setEyeCareConfiguration(config))
+        saveSettings()
+        syncDetectorToState()
     }
 
     func setPauseOnBatteryEnabled(_ isEnabled: Bool) async {

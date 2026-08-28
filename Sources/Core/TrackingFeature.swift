@@ -37,6 +37,13 @@ struct TrackingFeature: Reducer {
         case openPrivacySettings
         case showCameraCalibrationRetryAlert(message: String?)
         case retryCalibration
+        case updateNudgeHUD
+        case recordEyeCareAnalytics(EyeCareAnalyticsEvent)
+    }
+
+    enum EyeCareAnalyticsEvent: Equatable {
+        case blinkNudge
+        case restCompleted
     }
 
     struct State: Equatable {
@@ -57,6 +64,8 @@ struct TrackingFeature: Reducer {
         var lastPostureReadingTime: Date?
         var pauseOnBatteryEnabled: Bool = false
         var isOnBattery: Bool = false
+        var eyeCareConfig = EyeCareConfig()
+        var eyeCareState = EyeCareState()
 
         init(
             appState: AppState = .disabled,
@@ -72,7 +81,9 @@ struct TrackingFeature: Reducer {
             postureConfig: PostureConfig = PostureConfig(),
             lastPostureReadingTime: Date? = nil,
             pauseOnBatteryEnabled: Bool = false,
-            isOnBattery: Bool = false
+            isOnBattery: Bool = false,
+            eyeCareConfig: EyeCareConfig = EyeCareConfig(),
+            eyeCareState: EyeCareState = EyeCareState()
         ) {
             self.appState = appState
             self.trackingMode = trackingMode
@@ -88,6 +99,8 @@ struct TrackingFeature: Reducer {
             self.lastPostureReadingTime = lastPostureReadingTime
             self.pauseOnBatteryEnabled = pauseOnBatteryEnabled
             self.isOnBattery = isOnBattery
+            self.eyeCareConfig = eyeCareConfig
+            self.eyeCareState = eyeCareState
         }
 
         func readiness(for source: TrackingSource) -> TrackingSourceReadiness {
@@ -121,6 +134,9 @@ struct TrackingFeature: Reducer {
         case setPostureConfiguration(intensity: Double, warningOnsetDelay: TimeInterval)
         case pauseOnTheGoSettingChanged(isEnabled: Bool)
         case postureReadingReceived(PostureReading, isMarketingMode: Bool)
+        case setEyeCareConfiguration(EyeCareConfig)
+        case blinkActivityReceived(BlinkActivitySample, isMarketingMode: Bool)
+        case eyeCareTick(now: Date, isMarketingMode: Bool)
         case awayStateChanged(Bool, isMarketingMode: Bool)
         case initialSetupEvaluated(
             isMarketingMode: Bool,
@@ -184,6 +200,17 @@ struct TrackingFeature: Reducer {
         perform(intents)
     }
 
+    private func eyeCareIntents(for effects: [EyeCareEffect]) -> [EffectIntent] {
+        effects.map { effect in
+            switch effect {
+            case .updateBlur: return .updateBlur
+            case .updateNudgeHUD: return .updateNudgeHUD
+            case .recordBlinkNudge: return .recordEyeCareAnalytics(.blinkNudge)
+            case .recordRestCompleted: return .recordEyeCareAnalytics(.restCompleted)
+            }
+        }
+    }
+
     var body: some ReducerOf<Self> {
         Reduce { state, action in
             let previousAppState = state.appState
@@ -192,6 +219,7 @@ struct TrackingFeature: Reducer {
                 if previousAppState.isActive, !state.appState.isActive {
                     state.monitoringState.reset()
                     state.lastPostureReadingTime = nil
+                    state.eyeCareState.reset()
                 }
                 return effect
             }
@@ -323,6 +351,39 @@ struct TrackingFeature: Reducer {
 
                 guard result.shouldUpdateUI else { return finish() }
                 return finish(perform(.syncUI, .updateBlur))
+
+            case let .setEyeCareConfiguration(config):
+                state.eyeCareConfig = config
+                if !config.eyeCareEnabled {
+                    state.eyeCareState.reset()
+                    return finish(perform(.updateBlur, .updateNudgeHUD))
+                }
+                return finish()
+
+            case let .blinkActivityReceived(sample, isMarketingMode):
+                guard state.appState == .monitoring, !isMarketingMode else { return finish() }
+
+                let result = EyeCareEngine.processBlinkActivity(
+                    sample,
+                    state: state.eyeCareState,
+                    config: state.eyeCareConfig,
+                    isAway: state.monitoringState.isCurrentlyAway
+                )
+                state.eyeCareState = result.newState
+                return finish(perform(eyeCareIntents(for: result.effects)))
+
+            case let .eyeCareTick(now, isMarketingMode):
+                guard state.appState.isActive, !isMarketingMode else { return finish() }
+
+                let result = EyeCareEngine.processTick(
+                    now: now,
+                    state: state.eyeCareState,
+                    config: state.eyeCareConfig,
+                    appState: state.appState,
+                    isAway: state.monitoringState.isCurrentlyAway
+                )
+                state.eyeCareState = result.newState
+                return finish(perform(eyeCareIntents(for: result.effects)))
 
             case let .initialSetupEvaluated(
                 isMarketingMode,

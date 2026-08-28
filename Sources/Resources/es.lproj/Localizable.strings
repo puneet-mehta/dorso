@@ -212,3 +212,25 @@
 // MARK: - Common
 
 "common.cancel" = "Cancelar";
+
+// MARK: - Eye Care
+
+"nudge.posture" = "Siéntate derecho";
+"nudge.blink" = "Parpadea";
+"nudge.rest.countdown" = "Mira a 6 m de distancia — %@";
+"settings.eyeCare" = "Cuidado ocular";
+"settings.eyeCare.help" = "Recordatorios para parpadear y descansar la vista durante sesiones largas de pantalla. Todo el procesamiento permanece en tu Mac.";
+"settings.eyeCare.enable" = "Activar cuidado ocular";
+"settings.eyeCare.blinkNudge" = "Recordatorios de parpadeo";
+"settings.eyeCare.blinkNudge.help" = "Usa la cámara para detectar cuando miras fijamente sin parpadear y muestra un aviso sutil.";
+"settings.eyeCare.blinkNudge.cameraOnly" = "Disponible con seguimiento por cámara";
+"settings.eyeCare.blinkSensitivity" = "Sensibilidad";
+"settings.eyeCare.blinkSensitivity.low" = "Baja";
+"settings.eyeCare.blinkSensitivity.medium" = "Media";
+"settings.eyeCare.blinkSensitivity.high" = "Alta";
+"settings.eyeCare.rest" = "Pausas 20-20-20";
+"settings.eyeCare.rest.help" = "Cada 20 minutos de pantalla, mira algo a 6 metros de distancia durante 20 segundos.";
+"settings.eyeCare.restInterval" = "Intervalo de pausa";
+"settings.eyeCare.restInterval.value" = "%d min";
+"analytics.eyeBreaks" = "Pausas oculares";
+"analytics.blinkNudges" = "Avisos de parpadeo";

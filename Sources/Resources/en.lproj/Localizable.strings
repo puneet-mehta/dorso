@@ -212,3 +212,25 @@
 // MARK: - Common
 
 "common.cancel" = "Cancel";
+
+// MARK: - Eye Care
+
+"nudge.posture" = "Sit up straight";
+"nudge.blink" = "Blink your eyes";
+"nudge.rest.countdown" = "Look 20 ft away — %@";
+"settings.eyeCare" = "Eye Care";
+"settings.eyeCare.help" = "Reminders to blink and rest your eyes during long screen sessions. All processing stays on your Mac.";
+"settings.eyeCare.enable" = "Enable eye care";
+"settings.eyeCare.blinkNudge" = "Blink reminders";
+"settings.eyeCare.blinkNudge.help" = "Uses the camera to notice when you stare without blinking and shows a gentle nudge.";
+"settings.eyeCare.blinkNudge.cameraOnly" = "Available when using camera tracking";
+"settings.eyeCare.blinkSensitivity" = "Sensitivity";
+"settings.eyeCare.blinkSensitivity.low" = "Low";
+"settings.eyeCare.blinkSensitivity.medium" = "Medium";
+"settings.eyeCare.blinkSensitivity.high" = "High";
+"settings.eyeCare.rest" = "20-20-20 breaks";
+"settings.eyeCare.rest.help" = "Every 20 minutes of screen time, look at something 20 feet away for 20 seconds.";
+"settings.eyeCare.restInterval" = "Break interval";
+"settings.eyeCare.restInterval.value" = "%d min";
+"analytics.eyeBreaks" = "Eye Breaks";
+"analytics.blinkNudges" = "Blink Nudges";

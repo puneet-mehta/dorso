@@ -46,6 +46,11 @@ struct SettingsView: View {
     @State private var lastSelectedSettingsProfileID: String
     @State private var isApplyingProfileSelection = false
     @State private var showingNewProfilePrompt = false
+    @State private var eyeCareEnabled: Bool
+    @State private var eyeCareBlinkNudge: Bool
+    @State private var eyeCareBlinkSensitivity: BlinkSensitivity
+    @State private var eyeCareRestReminder: Bool
+    @State private var eyeCareRestInterval: Double
     @State private var showingDeleteConfirmation = false
     @State private var newProfileName = ""
 
@@ -101,6 +106,12 @@ struct SettingsView: View {
         _autoCheckForUpdates = State(initialValue: appDelegate.updaterManager?.automaticallyChecksForUpdates ?? false)
         #endif
         _toggleShortcutEnabled = State(initialValue: appDelegate.toggleShortcutEnabled)
+        let eyeCare = appDelegate.eyeCareConfig
+        _eyeCareEnabled = State(initialValue: eyeCare.eyeCareEnabled)
+        _eyeCareBlinkNudge = State(initialValue: eyeCare.blinkNudgeEnabled)
+        _eyeCareBlinkSensitivity = State(initialValue: eyeCare.blinkSensitivity)
+        _eyeCareRestReminder = State(initialValue: eyeCare.restReminderEnabled)
+        _eyeCareRestInterval = State(initialValue: eyeCare.restIntervalSeconds / 60)
         _toggleShortcut = State(initialValue: appDelegate.toggleShortcut)
         _detectionModeSlider = State(initialValue: Double(detectionModes.firstIndex(of: profileDetectionMode) ?? 0))
         _trackingSource = State(initialValue: appDelegate.trackingSource)
@@ -545,6 +556,7 @@ struct SettingsView: View {
                     .onChange(of: autoCheckForUpdates) { newValue in
                         appDelegate.updaterManager?.automaticallyChecksForUpdates = newValue
                     }
+                    #endif
 
                     CompactToggle(
                         title: L("settings.compatibilityMode"),
@@ -632,6 +644,100 @@ struct SettingsView: View {
                         }
                     )
                     .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                }
+            }
+
+            // Eye care: blink reminders (camera only) and 20-20-20 breaks
+            SettingsCard(icon: "eye", title: L("settings.eyeCare"), helpText: L("settings.eyeCare.help")) {
+                VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 0) {
+                    CompactToggle(
+                        title: L("settings.eyeCare.enable"),
+                        helpText: L("settings.eyeCare.help"),
+                        isOn: $eyeCareEnabled
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .onChange(of: eyeCareEnabled) { newValue in
+                        Task { @MainActor in
+                            await appDelegate.updateEyeCareConfig { $0.eyeCareEnabled = newValue }
+                        }
+                    }
+                }
+
+                if eyeCareEnabled {
+                    SubtleDivider()
+
+                    HStack(spacing: 0) {
+                        CompactToggle(
+                            title: L("settings.eyeCare.blinkNudge"),
+                            helpText: activeSource == .airpods
+                                ? L("settings.eyeCare.blinkNudge.cameraOnly")
+                                : L("settings.eyeCare.blinkNudge.help"),
+                            isOn: $eyeCareBlinkNudge,
+                            isDisabled: activeSource == .airpods
+                        )
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .onChange(of: eyeCareBlinkNudge) { newValue in
+                            Task { @MainActor in
+                                await appDelegate.updateEyeCareConfig { $0.blinkNudgeEnabled = newValue }
+                            }
+                        }
+
+                        HStack(spacing: 6) {
+                            Text(L("settings.eyeCare.blinkSensitivity"))
+                                .font(.system(size: 11))
+                                .opacity(eyeCareBlinkNudge && activeSource == .camera ? 1.0 : 0.5)
+                            CompactSegmentedPicker(
+                                selection: $eyeCareBlinkSensitivity,
+                                options: [
+                                    (BlinkSensitivity.low, L("settings.eyeCare.blinkSensitivity.low")),
+                                    (BlinkSensitivity.medium, L("settings.eyeCare.blinkSensitivity.medium")),
+                                    (BlinkSensitivity.high, L("settings.eyeCare.blinkSensitivity.high"))
+                                ]
+                            )
+                            .frame(width: 150)
+                            .disabled(!eyeCareBlinkNudge || activeSource == .airpods)
+                            .onChange(of: eyeCareBlinkSensitivity) { newValue in
+                                Task { @MainActor in
+                                    await appDelegate.updateEyeCareConfig { $0.blinkSensitivity = newValue }
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+
+                    HStack(spacing: 0) {
+                        CompactToggle(
+                            title: L("settings.eyeCare.rest"),
+                            helpText: L("settings.eyeCare.rest.help"),
+                            isOn: $eyeCareRestReminder
+                        )
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .onChange(of: eyeCareRestReminder) { newValue in
+                            Task { @MainActor in
+                                await appDelegate.updateEyeCareConfig { $0.restReminderEnabled = newValue }
+                            }
+                        }
+                    }
+
+                    if eyeCareRestReminder {
+                        CompactSlider(
+                            title: L("settings.eyeCare.restInterval"),
+                            helpText: L("settings.eyeCare.rest.help"),
+                            value: $eyeCareRestInterval,
+                            range: 10...40,
+                            step: 5,
+                            valueLabel: L("settings.eyeCare.restInterval.value", Int(eyeCareRestInterval))
+                        )
+                        .onChange(of: eyeCareRestInterval) { newValue in
+                            Task { @MainActor in
+                                await appDelegate.updateEyeCareConfig {
+                                    $0.restIntervalSeconds = newValue * 60
+                                }
+                            }
+                        }
+                    }
                 }
                 }
             }

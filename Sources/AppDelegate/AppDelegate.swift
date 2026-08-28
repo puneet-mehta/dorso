@@ -46,6 +46,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 
     // Warning overlay (alternative to blur)
     var warningOverlayManager = WarningOverlayManager()
+    let nudgeLabelManager = NudgeLabelManager()
     let settingsProfileManager = SettingsProfileManager()
     var appliedWarningColorData: Data?
 
@@ -171,6 +172,12 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
     var postureWarningIntensity: CGFloat {
         trackingStore.withState { $0.monitoringState.postureWarningIntensity }
     }
+    var blinkNudgeIntensity: CGFloat {
+        trackingStore.withState { $0.eyeCareState.blinkNudgeIntensity }
+    }
+    var eyeCareConfig: EyeCareConfig {
+        trackingStore.withState { $0.eyeCareConfig }
+    }
 
     // Global keyboard shortcut
     var toggleShortcutEnabled = true
@@ -211,6 +218,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 
     var setupComplete = false
     var marketingModeOverride: Bool?
+    var lastEyeCareTickTime: Date = .distantPast
 
     var isMarketingMode: Bool {
         if let marketingModeOverride {
@@ -356,6 +364,17 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
             } else {
                 startCalibration()
             }
+
+        case .updateNudgeHUD:
+            updateNudgeHUD()
+
+        case .recordEyeCareAnalytics(let event):
+            switch event {
+            case .blinkNudge:
+                AnalyticsManager.shared.recordBlinkNudge()
+            case .restCompleted:
+                AnalyticsManager.shared.recordRestBreakCompleted()
+            }
         }
     }
 
@@ -416,13 +435,16 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
             if activeWarningMode.usesWarningOverlay {
                 warningOverlayManager.setupOverlayWindows()
             }
+            nudgeLabelManager.setupWindows()
         }
 
         setupObservers()
 
         Timer.scheduledTimer(withTimeInterval: 0.033, repeats: true) { [weak self] _ in
             Task { @MainActor in
-                self?.updateBlur()
+                guard let self else { return }
+                self.updateBlur()
+                self.dispatchEyeCareTickIfDue()
             }
         }
 

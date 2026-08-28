@@ -9,6 +9,8 @@ struct DailyStats: Codable, Identifiable {
     var totalSeconds: TimeInterval
     var slouchSeconds: TimeInterval
     var slouchCount: Int
+    var blinkNudgeCount: Int = 0
+    var restBreaksCompleted: Int = 0
     
     var dayKey: String {
         Self.dayKey(for: date)
@@ -26,6 +28,24 @@ struct DailyStats: Codable, Identifiable {
         guard totalSeconds > 0 else { return 0.0 }
         let ratio = max(0, min(1, 1.0 - (slouchSeconds / totalSeconds)))
         return ratio * 100.0
+    }
+}
+
+extension DailyStats {
+    private enum CodingKeys: String, CodingKey {
+        case date, totalSeconds, slouchSeconds, slouchCount
+        case blinkNudgeCount, restBreaksCompleted
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        date = try container.decode(Date.self, forKey: .date)
+        totalSeconds = try container.decode(TimeInterval.self, forKey: .totalSeconds)
+        slouchSeconds = try container.decode(TimeInterval.self, forKey: .slouchSeconds)
+        slouchCount = try container.decode(Int.self, forKey: .slouchCount)
+        // Files written before eye care existed lack these keys.
+        blinkNudgeCount = try container.decodeIfPresent(Int.self, forKey: .blinkNudgeCount) ?? 0
+        restBreaksCompleted = try container.decodeIfPresent(Int.self, forKey: .restBreaksCompleted) ?? 0
     }
 }
 
@@ -223,6 +243,24 @@ class AnalyticsManager: ObservableObject {
         // Slouch events are significant - schedule a save promptly.
         saveHistory()
     }
+
+    func recordBlinkNudge() {
+        checkDayRollover()
+        todayStats.blinkNudgeCount += 1
+        let key = DailyStats.dayKey(for: todayStats.date, calendar: calendar)
+        history[key] = todayStats
+        markDirty()
+        saveHistory()
+    }
+
+    func recordRestBreakCompleted() {
+        checkDayRollover()
+        todayStats.restBreaksCompleted += 1
+        let key = DailyStats.dayKey(for: todayStats.date, calendar: calendar)
+        history[key] = todayStats
+        markDirty()
+        saveHistory()
+    }
     
     // MARK: - Data Retrieval
     
@@ -327,7 +365,10 @@ class AnalyticsManager: ObservableObject {
             let totalSeconds: TimeInterval = point.hours * 3600
             let slouchSeconds = totalSeconds * (1.0 - point.score / 100.0)
             let key = DailyStats.dayKey(for: date, calendar: calendar)
-            let stats = DailyStats(date: date, totalSeconds: totalSeconds, slouchSeconds: slouchSeconds, slouchCount: point.slouchCount)
+            var stats = DailyStats(date: date, totalSeconds: totalSeconds, slouchSeconds: slouchSeconds, slouchCount: point.slouchCount)
+            // Plausible eye care demo data scaled to screen time.
+            stats.restBreaksCompleted = max(1, Int(point.hours * 2.2))
+            stats.blinkNudgeCount = max(0, point.slouchCount / 3)
             history[key] = stats
             if point.daysAgo == 0 { todayStats = stats }
         }

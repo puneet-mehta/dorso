@@ -89,6 +89,28 @@ class CameraPostureDetector: NSObject, PostureDetector {
     var onPostureReading: ((PostureReading) -> Void)?
     var onCalibrationUpdate: ((CalibrationSample) -> Void)?
 
+    // MARK: - Blink Detection
+
+    /// Camera-only signal (like onAwayStateChange): when enabled, eye
+    /// landmarks are sampled at ~15 fps independent of the posture throttle
+    /// and aggregated into 1 Hz BlinkActivitySamples delivered on main.
+    var isBlinkDetectionEnabled = false {
+        didSet {
+            if isBlinkDetectionEnabled != oldValue {
+                captureQueue.async { [weak self] in self?.resetBlinkAggregation() }
+            }
+        }
+    }
+    var onBlinkActivity: ((BlinkActivitySample) -> Void)?
+
+    private var lastBlinkFrameTime: Date = .distantPast
+    private let blinkFrameInterval: TimeInterval = 1.0 / 15.0
+    private var blinkProcessor = BlinkEARProcessor()
+    private var blinkWindowStart: Date?
+    private var blinkWindowBlinkCount = 0
+    private var blinkWindowFrameCount = 0
+    private var blinkWindowValidCount = 0
+
     // MARK: - Camera State
 
     private var captureSession: AVCaptureSession?
@@ -235,6 +257,7 @@ class CameraPostureDetector: NSObject, PostureDetector {
         isMonitoring = false
         consecutiveNoDetectionFrames = 0
         isAway = false
+        captureQueue.async { [weak self] in self?.resetBlinkAggregation() }
     }
 
     // MARK: - Calibration
@@ -503,6 +526,67 @@ class CameraPostureDetector: NSObject, PostureDetector {
         try? handler.perform([faceRequest])
     }
 
+    // MARK: - Blink Frame Processing
+
+    private func processBlinkFrame(_ pixelBuffer: CVPixelBuffer, at timestamp: Date) {
+        let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .up, options: [:])
+        let request = VNDetectFaceLandmarksRequest()
+
+        var ear: Double?
+        if (try? handler.perform([request])) != nil,
+           let face = request.results?.first,
+           let landmarks = face.landmarks {
+            let leftEAR = landmarks.leftEye.flatMap {
+                BlinkEARProcessor.eyeAspectRatio(points: $0.normalizedPoints)
+            }
+            let rightEAR = landmarks.rightEye.flatMap {
+                BlinkEARProcessor.eyeAspectRatio(points: $0.normalizedPoints)
+            }
+            let ears = [leftEAR, rightEAR].compactMap { $0 }
+            if !ears.isEmpty {
+                ear = ears.reduce(0, +) / Double(ears.count)
+            }
+        }
+
+        let output = blinkProcessor.ingest(ear: ear)
+        accumulateBlinkSample(output, at: timestamp)
+    }
+
+    private func accumulateBlinkSample(_ output: BlinkEARProcessor.Output, at timestamp: Date) {
+        if blinkWindowStart == nil {
+            blinkWindowStart = timestamp
+        }
+        blinkWindowFrameCount += 1
+        if output.isValidSample { blinkWindowValidCount += 1 }
+        if output.blinkDetected { blinkWindowBlinkCount += 1 }
+
+        guard let windowStart = blinkWindowStart,
+              timestamp.timeIntervalSince(windowStart) >= 1.0 else { return }
+
+        let sample = BlinkActivitySample(
+            timestamp: timestamp,
+            blinkCount: blinkWindowBlinkCount,
+            validSampleRatio: Double(blinkWindowValidCount) / Double(max(1, blinkWindowFrameCount))
+        )
+        blinkWindowStart = timestamp
+        blinkWindowBlinkCount = 0
+        blinkWindowFrameCount = 0
+        blinkWindowValidCount = 0
+
+        DispatchQueue.main.async { [weak self] in
+            self?.onBlinkActivity?(sample)
+        }
+    }
+
+    private func resetBlinkAggregation() {
+        blinkProcessor.reset()
+        blinkWindowStart = nil
+        blinkWindowBlinkCount = 0
+        blinkWindowFrameCount = 0
+        blinkWindowValidCount = 0
+        lastBlinkFrameTime = .distantPast
+    }
+
     private func handleDetection(noseY: CGFloat, faceWidth: CGFloat? = nil) {
         currentNoseY = noseY
         if let width = faceWidth {
@@ -614,6 +698,16 @@ extension CameraPostureDetector: AVCaptureVideoDataOutputSampleBufferDelegate {
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
 
         let now = Date()
+
+        // Blink sampling runs on its own, faster cadence (blinks last only
+        // 100-300 ms) and is independent of the posture throttle below.
+        if isBlinkDetectionEnabled, now.timeIntervalSince(lastBlinkFrameTime) >= blinkFrameInterval {
+            lastBlinkFrameTime = now
+            autoreleasepool {
+                processBlinkFrame(pixelBuffer, at: now)
+            }
+        }
+
         guard now.timeIntervalSince(lastFrameTime) >= frameInterval else { return }
         lastFrameTime = now
 

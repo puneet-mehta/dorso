@@ -212,3 +212,25 @@
 // MARK: - Common
 
 "common.cancel" = "取消";
+
+// MARK: - Eye Care
+
+"nudge.posture" = "坐直身体";
+"nudge.blink" = "眨眨眼睛";
+"nudge.rest.countdown" = "看向6米外 — %@";
+"settings.eyeCare" = "护眼";
+"settings.eyeCare.help" = "在长时间使用屏幕时提醒你眨眼和休息眼睛。所有处理均在你的Mac上完成。";
+"settings.eyeCare.enable" = "启用护眼";
+"settings.eyeCare.blinkNudge" = "眨眼提醒";
+"settings.eyeCare.blinkNudge.help" = "通过摄像头检测你长时间盯着屏幕不眨眼的情况，并显示温和提醒。";
+"settings.eyeCare.blinkNudge.cameraOnly" = "使用摄像头追踪时可用";
+"settings.eyeCare.blinkSensitivity" = "灵敏度";
+"settings.eyeCare.blinkSensitivity.low" = "低";
+"settings.eyeCare.blinkSensitivity.medium" = "中";
+"settings.eyeCare.blinkSensitivity.high" = "高";
+"settings.eyeCare.rest" = "20-20-20休息";
+"settings.eyeCare.rest.help" = "每使用屏幕20分钟，看向6米外的物体20秒。";
+"settings.eyeCare.restInterval" = "休息间隔";
+"settings.eyeCare.restInterval.value" = "%d分钟";
+"analytics.eyeBreaks" = "护眼休息";
+"analytics.blinkNudges" = "眨眼提醒次数";

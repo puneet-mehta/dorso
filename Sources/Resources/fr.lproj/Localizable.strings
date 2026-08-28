@@ -212,3 +212,25 @@
 // MARK: - Common
 
 "common.cancel" = "Annuler";
+
+// MARK: - Eye Care
+
+"nudge.posture" = "Redresse-toi";
+"nudge.blink" = "Cligne des yeux";
+"nudge.rest.countdown" = "Regarde à 6 m — %@";
+"settings.eyeCare" = "Soin des yeux";
+"settings.eyeCare.help" = "Rappels pour cligner des yeux et reposer votre vue pendant les longues sessions d'écran. Tout le traitement reste sur votre Mac.";
+"settings.eyeCare.enable" = "Activer le soin des yeux";
+"settings.eyeCare.blinkNudge" = "Rappels de clignement";
+"settings.eyeCare.blinkNudge.help" = "Utilise la caméra pour détecter quand vous fixez l'écran sans cligner et affiche un rappel discret.";
+"settings.eyeCare.blinkNudge.cameraOnly" = "Disponible avec le suivi par caméra";
+"settings.eyeCare.blinkSensitivity" = "Sensibilité";
+"settings.eyeCare.blinkSensitivity.low" = "Faible";
+"settings.eyeCare.blinkSensitivity.medium" = "Moyenne";
+"settings.eyeCare.blinkSensitivity.high" = "Élevée";
+"settings.eyeCare.rest" = "Pauses 20-20-20";
+"settings.eyeCare.rest.help" = "Toutes les 20 minutes d'écran, regardez quelque chose à 6 mètres pendant 20 secondes.";
+"settings.eyeCare.restInterval" = "Intervalle de pause";
+"settings.eyeCare.restInterval.value" = "%d min";
+"analytics.eyeBreaks" = "Pauses oculaires";
+"analytics.blinkNudges" = "Rappels de clignement";

@@ -212,3 +212,25 @@
 // MARK: - Common
 
 "common.cancel" = "キャンセル";
+
+// MARK: - Eye Care
+
+"nudge.posture" = "姿勢を正しましょう";
+"nudge.blink" = "まばたきをしましょう";
+"nudge.rest.countdown" = "6m先を見ましょう — %@";
+"settings.eyeCare" = "アイケア";
+"settings.eyeCare.help" = "長時間の画面作業中に、まばたきや目の休憩を促します。すべての処理はMac上で完結します。";
+"settings.eyeCare.enable" = "アイケアを有効にする";
+"settings.eyeCare.blinkNudge" = "まばたきリマインダー";
+"settings.eyeCare.blinkNudge.help" = "カメラでまばたきせずに画面を見つめている状態を検知し、やさしく通知します。";
+"settings.eyeCare.blinkNudge.cameraOnly" = "カメラトラッキング使用時に利用可能";
+"settings.eyeCare.blinkSensitivity" = "感度";
+"settings.eyeCare.blinkSensitivity.low" = "低";
+"settings.eyeCare.blinkSensitivity.medium" = "中";
+"settings.eyeCare.blinkSensitivity.high" = "高";
+"settings.eyeCare.rest" = "20-20-20休憩";
+"settings.eyeCare.rest.help" = "画面作業20分ごとに、6m先のものを20秒間見ましょう。";
+"settings.eyeCare.restInterval" = "休憩間隔";
+"settings.eyeCare.restInterval.value" = "%d分";
+"analytics.eyeBreaks" = "目の休憩";
+"analytics.blinkNudges" = "まばたき通知";
