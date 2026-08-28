@@ -1,0 +1,49 @@
+name: Eye Care preview build
+
+on:
+  push:
+    branches: [feat/eye-care]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Run test suite
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: swift test
+        run: swift test
+
+  build:
+    name: Build preview app
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build (universal, no Sparkle)
+        run: ./build.sh --no-sparkle
+
+      - name: Create ZIP
+        run: ditto -c -k --keepParent build/Dorso.app build/Dorso-eye-care-preview.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Dorso-eye-care-preview
+          path: build/Dorso-eye-care-preview.zip
+
+      - name: Publish moving prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create eye-care-preview \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title "Eye Care preview" \
+            --notes-file .github/eye-care-preview-notes.md \
+            2>/dev/null || true
+          gh release upload eye-care-preview build/Dorso-eye-care-preview.zip --clobber
+          gh release edit eye-care-preview --notes-file .github/eye-care-preview-notes.md
