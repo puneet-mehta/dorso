@@ -8,6 +8,8 @@
 #   ./build.sh --appstore   # Build for App Store (no private APIs)
 #   ./build.sh --release    # Build with private APIs and create release archive
 #   ./build.sh --dev        # Fast iteration: debug config, host arch only (no universal)
+#   ./build.sh --no-sparkle # Direct-distribution build without the auto-updater
+#                           # (Sparkle is never linked; the app makes no network requests)
 
 set -e
 
@@ -26,13 +28,24 @@ SPARKLE_PUBLIC_ED_KEY="DGZFLiX7GOAurNDYQQQaoR4Hb4csYScDIIiui74ZvLY="
 # Check for App Store build flag
 APP_STORE_BUILD=false
 DEV_BUILD=false
+NO_SPARKLE=false
 BUILD_CONFIG="release"
+if [[ "$*" == *"--no-sparkle"* ]]; then
+    NO_SPARKLE=true
+    # Read by Package.swift, which then drops the Sparkle product from the
+    # DorsoCore target and defines NO_SPARKLE for the Swift sources
+    export DORSO_NO_SPARKLE=1
+    echo "Building without Sparkle (no auto-updater, no network access)..."
+fi
 if [[ "$*" == *"--appstore"* ]]; then
     APP_STORE_BUILD=true
     # -dead_strip_dylibs removes the Sparkle load command (all Sparkle code is
     # compiled out via APP_STORE, so nothing references it)
     SWIFT_BUILD_FLAGS=(-Xswiftc -D -Xswiftc APP_STORE -Xlinker -dead_strip_dylibs)
     echo "Building for App Store (no private APIs)..."
+elif [ "$NO_SPARKLE" = true ]; then
+    # Nothing to resolve from Contents/Frameworks: Sparkle is not linked
+    SWIFT_BUILD_FLAGS=()
 else
     # Resolve the embedded Sparkle.framework from Contents/Frameworks
     SWIFT_BUILD_FLAGS=(-Xlinker -rpath -Xlinker @executable_path/../Frameworks)
@@ -125,7 +138,7 @@ else
 fi
 
 # Embed Sparkle.framework (direct-distribution builds only)
-if [ "$APP_STORE_BUILD" = false ]; then
+if [ "$APP_STORE_BUILD" = false ] && [ "$NO_SPARKLE" = false ]; then
     SPARKLE_FRAMEWORK="$SCRIPT_DIR/.build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework"
     if [ ! -d "$SPARKLE_FRAMEWORK" ]; then
         echo -e "${RED}Error: Sparkle.framework not found at $SPARKLE_FRAMEWORK${NC}"
@@ -197,7 +210,7 @@ EOF
 
 # Sparkle update feed keys (direct-distribution builds only; App Store builds
 # must not reference an update feed)
-if [ "$APP_STORE_BUILD" = false ]; then
+if [ "$APP_STORE_BUILD" = false ] && [ "$NO_SPARKLE" = false ]; then
     /usr/libexec/PlistBuddy \
         -c "Add :SUFeedURL string $SPARKLE_FEED_URL" \
         -c "Add :SUPublicEDKey string $SPARKLE_PUBLIC_ED_KEY" \
@@ -206,7 +219,7 @@ fi
 
 # Compile app icon
 # Priority: .icon file (Icon Composer) > .icns file > .iconset folder
-if [ -f "$SCRIPT_DIR/AppIcon.icon/icon.json" ]; then
+if [ -f "$SCRIPT_DIR/AppIcon.icon/icon.json" ] && xcrun --find actool >/dev/null 2>&1; then
     echo "Compiling Icon Composer icon..."
     xcrun actool "$SCRIPT_DIR/AppIcon.icon" \
         --compile "$RESOURCES_DIR" \

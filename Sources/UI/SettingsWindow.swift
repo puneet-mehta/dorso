@@ -27,7 +27,7 @@ struct SettingsView: View {
     @State private var warningOnsetDelay: Double
     @State private var launchAtLogin: Bool
     @State private var appAppearance: AppAppearance
-    #if !APP_STORE
+    #if !APP_STORE && !NO_SPARKLE
     @State private var autoCheckForUpdates: Bool
     #endif
     @State private var toggleShortcutEnabled: Bool
@@ -97,7 +97,7 @@ struct SettingsView: View {
         _warningOnsetDelay = State(initialValue: profileWarningOnsetDelay)
         _launchAtLogin = State(initialValue: SMAppService.mainApp.status == .enabled)
         _appAppearance = State(initialValue: appDelegate.appAppearance)
-        #if !APP_STORE
+        #if !APP_STORE && !NO_SPARKLE
         _autoCheckForUpdates = State(initialValue: appDelegate.updaterManager?.automaticallyChecksForUpdates ?? false)
         #endif
         _toggleShortcutEnabled = State(initialValue: appDelegate.toggleShortcutEnabled)
@@ -535,6 +535,7 @@ struct SettingsView: View {
 
                 #if !APP_STORE
                 HStack(spacing: 0) {
+                    #if !NO_SPARKLE
                     CompactToggle(
                         title: L("settings.autoUpdates"),
                         helpText: L("settings.autoUpdates.help"),

@@ -1,4 +1,4 @@
-#if !APP_STORE
+#if !APP_STORE && !NO_SPARKLE
 import AppKit
 import Sparkle
 

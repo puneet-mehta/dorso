@@ -16,7 +16,7 @@ final class MenuBarManager {
     var onOpenSettings: (() -> Void)?
     var onOpenSupport: (() -> Void)?
     var onQuit: (() -> Void)?
-    #if !APP_STORE
+    #if !APP_STORE && !NO_SPARKLE
     var onCheckForUpdates: (() -> Void)?
     #endif
 
@@ -75,7 +75,7 @@ final class MenuBarManager {
         settingsItem.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: L("menu.settings"))
         menu.addItem(settingsItem)
 
-        #if !APP_STORE
+        #if !APP_STORE && !NO_SPARKLE
         // Check for Updates (direct-distribution builds only; the App Store
         // delivers updates for Mac App Store installs)
         let updatesItem = NSMenuItem(title: L("menu.checkForUpdates"), action: #selector(handleCheckForUpdates), keyEquivalent: "")
@@ -151,7 +151,7 @@ final class MenuBarManager {
         onQuit?()
     }
 
-    #if !APP_STORE
+    #if !APP_STORE && !NO_SPARKLE
     @objc private func handleCheckForUpdates() {
         onCheckForUpdates?()
     }

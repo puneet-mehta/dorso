@@ -31,7 +31,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
     // UI Components
     let menuBarManager = MenuBarManager()
 
-    #if !APP_STORE
+    #if !APP_STORE && !NO_SPARKLE
     /// Sparkle auto-updater. Created in applicationDidFinishLaunching (not
     /// init) so headless tests constructing AppDelegate never start the
     /// update machinery.
@@ -397,7 +397,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
             NSApp.applicationIconImage = applyMacOSIconMask(to: icon)
         }
 
-        #if !APP_STORE
+        #if !APP_STORE && !NO_SPARKLE
         // UI preview launches must not start the updater: with silent
         // updates enabled it can stage and install a store build over the
         // dev build mid-iteration
@@ -545,7 +545,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.quit()
             }
         }
-        #if !APP_STORE
+        #if !APP_STORE && !NO_SPARKLE
         menuBarManager.onCheckForUpdates = { [weak self] in
             Task { @MainActor in
                 self?.updaterManager?.checkForUpdates()
