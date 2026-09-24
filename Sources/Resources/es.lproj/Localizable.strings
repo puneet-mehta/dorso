@@ -90,7 +90,7 @@
 "alert.cameraNotAvailable.message" = "Asegúrate de que la cámara está conectada y el acceso a la cámara está concedido.";
 "alert.tryAgain" = "Reintentar";
 "support.title" = "Apoya a Dorso";
-"support.message" = "Si Dorso te ha ayudado con tu postura y quieres mostrar tu apoyo, por favor invítame a un café.";
+"support.message" = "Si Dorso te ha ayudado a sentirte mejor frente al ordenador y quieres mostrar tu apoyo, por favor invítame a un café.";
 "support.button" = "Invítame a un café";
 
 // MARK: - Calibration (CalibrationWindow.swift)
@@ -192,9 +192,9 @@
 // MARK: - Analytics (AnalyticsWindow.swift)
 
 "analytics.title" = "Estadísticas";
-"analytics.header" = "Estadísticas de posturas";
+"analytics.header" = "Estadísticas de bienestar";
 "analytics.tagline" = "Registra tus hábitos y mejora con el tiempo";
-"analytics.todayScore" = "Puntuación de hoy";
+"analytics.todayScore" = "Puntuación de postura";
 "analytics.monitoringTime" = "Tiempo de monitoreo";
 "analytics.slouchDuration" = "Tiempo encorvado";
 "analytics.slouchEvents" = "Episodios de malas posturas";
@@ -217,6 +217,7 @@
 
 "nudge.posture" = "Siéntate derecho";
 "nudge.blink" = "Parpadea";
+"nudge.forwardHead" = "Aléjate un poco";
 "nudge.rest.countdown" = "Mira a 6 m de distancia — %@";
 "settings.eyeCare" = "Cuidado ocular";
 "settings.eyeCare.help" = "Recordatorios para parpadear y descansar la vista durante sesiones largas de pantalla. Todo el procesamiento permanece en tu Mac.";
@@ -234,3 +235,23 @@
 "settings.eyeCare.restInterval.value" = "%d min";
 "analytics.eyeBreaks" = "Pausas oculares";
 "analytics.blinkNudges" = "Avisos de parpadeo";
+
+// MARK: - Movement
+
+"nudge.movement" = "Hora de levantarse — da un paseo corto";
+"settings.movement" = "Movimiento";
+"settings.movement.help" = "Te recuerda levantarte y moverte cuando llevas demasiado tiempo sentado frente a la pantalla. Alejarte un minuto cuenta como pausa.";
+"settings.movement.enable" = "Recordatorios para levantarse";
+"settings.movement.interval" = "Tiempo sentado";
+"settings.movement.interval.help" = "Cuánto tiempo puedes estar sentado seguido antes de que Dorso sugiera levantarte.";
+"analytics.movementBreaks" = "Pausas de movimiento";
+
+// MARK: - Smile
+
+"nudge.smile" = "No olvides sonreír 😊";
+"settings.smile" = "Sonrisa";
+"settings.smile.help" = "Un recordatorio divertido para sonreír de vez en cuando: sonreír relaja la cara tras mucha concentración. Se detecta en tu Mac, nunca se graba.";
+"settings.smile.enable" = "Recordatorios de sonrisa";
+"settings.smile.interval" = "Recordar tras";
+"analytics.smiles" = "Sonrisas";
+"calibration.invalidData" = "La calibración no capturó suficiente movimiento de cabeza para distinguir la buena postura del encorvamiento. Siéntate a una distancia cómoda y sigue los objetivos moviendo la cabeza — no solo los ojos — e inténtalo de nuevo.";

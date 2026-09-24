@@ -90,7 +90,7 @@
 "alert.cameraNotAvailable.message" = "请确保摄像头已连接并已授予摄像头访问权限。";
 "alert.tryAgain" = "重试";
 "support.title" = "支持 Dorso";
-"support.message" = "如果 Dorso 帮助你改善了坐姿，并且你愿意表达支持，请我喝杯咖啡。";
+"support.message" = "如果 Dorso 让你在电脑前更舒适，并且你愿意表达支持，请我喝杯咖啡。";
 "support.button" = "请我喝杯咖啡";
 
 // MARK: - Calibration (CalibrationWindow.swift)
@@ -192,9 +192,9 @@
 // MARK: - Analytics (AnalyticsWindow.swift)
 
 "analytics.title" = "统计";
-"analytics.header" = "姿势统计";
+"analytics.header" = "健康统计";
 "analytics.tagline" = "追踪您的习惯和改善情况";
-"analytics.todayScore" = "今日评分";
+"analytics.todayScore" = "姿势得分";
 "analytics.monitoringTime" = "监测时间";
 "analytics.slouchDuration" = "不良姿势时长";
 "analytics.slouchEvents" = "不良姿势次数";
@@ -217,6 +217,7 @@
 
 "nudge.posture" = "坐直身体";
 "nudge.blink" = "眨眨眼睛";
+"nudge.forwardHead" = "离屏幕远一点";
 "nudge.rest.countdown" = "看向6米外 — %@";
 "settings.eyeCare" = "护眼";
 "settings.eyeCare.help" = "在长时间使用屏幕时提醒你眨眼和休息眼睛。所有处理均在你的Mac上完成。";
@@ -234,3 +235,23 @@
 "settings.eyeCare.restInterval.value" = "%d分钟";
 "analytics.eyeBreaks" = "护眼休息";
 "analytics.blinkNudges" = "眨眼提醒次数";
+
+// MARK: - Movement
+
+"nudge.movement" = "该站起来了 — 去散散步吧";
+"settings.movement" = "运动";
+"settings.movement.help" = "久坐屏幕前时提醒你站起来活动。离开座位一分钟即算一次休息。";
+"settings.movement.enable" = "站立提醒";
+"settings.movement.interval" = "久坐时间";
+"settings.movement.interval.help" = "连续久坐多长时间后，Dorso会建议你站起来。";
+"analytics.movementBreaks" = "运动休息";
+
+// MARK: - Smile
+
+"nudge.smile" = "别忘了微笑 😊";
+"settings.smile" = "微笑";
+"settings.smile.help" = "一个有趣的提醒，让你时不时微笑一下——长时间专注后，微笑能放松面部。在你的Mac上检测，绝不录制。";
+"settings.smile.enable" = "微笑提醒";
+"settings.smile.interval" = "提醒间隔";
+"analytics.smiles" = "微笑次数";
+"calibration.invalidData" = "校准未捕捉到足够的头部移动，无法区分良好坐姿与驼背。请保持舒适距离，用头部（而不仅是眼睛）跟随目标移动，然后重试。";

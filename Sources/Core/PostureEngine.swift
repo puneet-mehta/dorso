@@ -8,6 +8,7 @@ struct PostureMonitoringState: Equatable {
     var isCurrentlyAway: Bool = false
     var badPostureStartTime: Date? = nil
     var postureWarningIntensity: CGFloat = 0
+    var warningCause: PostureWarningCause = .slouch
 
     mutating func reset() {
         consecutiveBadFrames = 0
@@ -16,6 +17,7 @@ struct PostureMonitoringState: Equatable {
         isCurrentlyAway = false
         badPostureStartTime = nil
         postureWarningIntensity = 0
+        warningCause = .slouch
     }
 }
 
@@ -225,6 +227,7 @@ struct PostureEngine {
                     let clampedSeverity = min(1.0, max(0.0, reading.severity))
                     let adjustedSeverity = pow(clampedSeverity, 1.0 / intensity)
                     newState.postureWarningIntensity = CGFloat(adjustedSeverity)
+                    newState.warningCause = reading.cause
                 }
             }
         } else {

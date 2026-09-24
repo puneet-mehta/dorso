@@ -92,6 +92,19 @@ extension AppDelegate {
             return
         }
 
+        // Data that fails validation (e.g. a posture range too small to
+        // distinguish sitting up from slouching - typical when the head
+        // barely moved during calibration) must not be saved: every
+        // downstream check would treat it as "not calibrated" while the
+        // flow reported success. Ask for a retry with guidance instead.
+        guard calibration.isValid else {
+            os_log(.error, log: log, "Calibration produced invalid data for %{public}@ - requesting retry", source.displayName)
+            calibratingSource = nil
+            calibrationController = nil
+            await sendTrackingAction(.calibrationStartFailed(errorMessage: L("calibration.invalidData")))
+            return
+        }
+
         if let cameraCalibration = calibration as? CameraCalibrationData {
             self.cameraCalibration = cameraCalibration
             // Also save as legacy profile keyed by the display configuration
@@ -100,7 +113,8 @@ extension AppDelegate {
                 badPostureY: cameraCalibration.badPostureY,
                 neutralY: cameraCalibration.neutralY,
                 postureRange: cameraCalibration.postureRange,
-                cameraID: cameraCalibration.cameraID
+                cameraID: cameraCalibration.cameraID,
+                neutralFaceWidth: cameraCalibration.neutralFaceWidth
             )
             saveProfile(forKey: DisplayMonitor.getCurrentConfigKey(), data: profile)
         } else if let airPodsCalibration = calibration as? AirPodsCalibrationData {

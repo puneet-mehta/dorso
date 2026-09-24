@@ -33,6 +33,10 @@ enum SettingsKeys {
     static let eyeCareBlinkSensitivity = "eyeCareBlinkSensitivity"
     static let eyeCareRestReminder = "eyeCareRestReminder"
     static let eyeCareRestIntervalMinutes = "eyeCareRestIntervalMinutes"
+    static let movementReminder = "movementReminder"
+    static let movementIntervalMinutes = "movementIntervalMinutes"
+    static let smileReminder = "smileReminder"
+    static let smileIntervalMinutes = "smileIntervalMinutes"
 
     // Legacy keys (migrated on load)
     static let legacyAirPodsProfile = "airPodsProfile"

@@ -59,10 +59,12 @@ extension AppDelegate {
         let activeSource = activeTrackingSource
         let shouldRun = PostureEngine.shouldDetectorRun(for: state, trackingSource: activeSource)
 
-        // Blink detection rides the camera only while camera tracking is the
-        // active source and the user opted in.
-        cameraDetector.isBlinkDetectionEnabled =
+        // Face analysis (blink + smile) rides the camera only while camera
+        // tracking is the active source and the user opted in.
+        cameraDetector.analyzesBlink =
             eyeCareConfig.blinkNudgeActive && activeSource == .camera
+        cameraDetector.analyzesSmile =
+            smileConfig.smileReminderEnabled && activeSource == .camera
 
         // Always stop the other detector so in-flight starts are cancelled
         // even if that detector has not flipped isActive=true yet.
@@ -334,6 +336,24 @@ extension AppDelegate {
         var config = eyeCareConfig
         transform(&config)
         await sendTrackingAction(.setEyeCareConfiguration(config))
+        saveSettings()
+        syncDetectorToState()
+    }
+
+    /// Apply a change to the movement break configuration.
+    func updateMovementConfig(_ transform: (inout MovementConfig) -> Void) async {
+        var config = movementConfig
+        transform(&config)
+        await sendTrackingAction(.setMovementConfiguration(config))
+        saveSettings()
+    }
+
+    /// Apply a change to the smile reminder configuration; re-sync so the
+    /// camera's face analysis gate follows.
+    func updateSmileConfig(_ transform: (inout SmileConfig) -> Void) async {
+        var config = smileConfig
+        transform(&config)
+        await sendTrackingAction(.setSmileConfiguration(config))
         saveSettings()
         syncDetectorToState()
     }

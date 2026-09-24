@@ -126,12 +126,15 @@ final class EyeCareEngineTests: XCTestCase {
 
     func testNudgeClearsOnBlinkRecovery() {
         let config = makeConfig()
-        var state = run(seconds: 60, config: config)
+        // 50s: the nudge fires at ~44s (once minWindowCoverage is met) and is
+        // still inside its 10s display window - running longer would let it
+        // auto-expire before we test recovery.
+        var state = run(seconds: 50, config: config)
         XCTAssertNotNil(state.blinkNudgeStartedAt)
 
         // A burst of blinks clears it immediately.
         let result = EyeCareEngine.processBlinkActivity(
-            sample(at: 61, blinks: 2),
+            sample(at: 51, blinks: 2),
             state: state,
             config: config,
             isAway: false

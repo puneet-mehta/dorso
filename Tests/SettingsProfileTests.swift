@@ -77,4 +77,21 @@ final class SettingsProfileTests: XCTestCase {
         XCTAssertLessThanOrEqual(abs(Double(g1 - g0)), 0.1)
         XCTAssertLessThanOrEqual(abs(Double(b1 - b0)), 0.1)
     }
+    func testProfileDataWithoutFaceWidthDecodes() throws {
+        let legacyJSON = """
+        {"goodPostureY": 0.6, "badPostureY": 0.5, "neutralY": 0.55, "postureRange": 0.1, "cameraID": "cam"}
+        """
+        let profile = try JSONDecoder().decode(ProfileData.self, from: Data(legacyJSON.utf8))
+        XCTAssertNil(profile.neutralFaceWidth)
+    }
+
+    func testProfileDataFaceWidthRoundTrips() throws {
+        let profile = ProfileData(
+            goodPostureY: 0.6, badPostureY: 0.5, neutralY: 0.55,
+            postureRange: 0.1, cameraID: "cam", neutralFaceWidth: 0.21
+        )
+        let decoded = try JSONDecoder().decode(ProfileData.self, from: JSONEncoder().encode(profile))
+        XCTAssertEqual(decoded.neutralFaceWidth, 0.21)
+    }
+
 }

@@ -90,7 +90,7 @@
 "alert.cameraNotAvailable.message" = "Please make sure your camera is connected and camera access is granted.";
 "alert.tryAgain" = "Try Again";
 "support.title" = "Support Dorso";
-"support.message" = "If Dorso has helped you with your posture and you want to show some support, please buy me a coffee.";
+"support.message" = "If Dorso has helped you feel better at your desk and you want to show some support, please buy me a coffee.";
 "support.button" = "Buy Me a Coffee";
 
 // MARK: - Calibration (CalibrationWindow.swift)
@@ -192,9 +192,9 @@
 // MARK: - Analytics (AnalyticsWindow.swift)
 
 "analytics.title" = "Analytics";
-"analytics.header" = "Posture Analytics";
+"analytics.header" = "Wellness Analytics";
 "analytics.tagline" = "Track your habits and improvement over time";
-"analytics.todayScore" = "Today's Score";
+"analytics.todayScore" = "Posture Score";
 "analytics.monitoringTime" = "Monitoring Time";
 "analytics.slouchDuration" = "Slouch Duration";
 "analytics.slouchEvents" = "Slouch Events";
@@ -217,6 +217,7 @@
 
 "nudge.posture" = "Sit up straight";
 "nudge.blink" = "Blink your eyes";
+"nudge.forwardHead" = "Move back a bit";
 "nudge.rest.countdown" = "Look 20 ft away — %@";
 "settings.eyeCare" = "Eye Care";
 "settings.eyeCare.help" = "Reminders to blink and rest your eyes during long screen sessions. All processing stays on your Mac.";
@@ -234,3 +235,23 @@
 "settings.eyeCare.restInterval.value" = "%d min";
 "analytics.eyeBreaks" = "Eye Breaks";
 "analytics.blinkNudges" = "Blink Nudges";
+
+// MARK: - Movement
+
+"nudge.movement" = "Time to stand up — take a short walk";
+"settings.movement" = "Movement";
+"settings.movement.help" = "Reminds you to stand up and move after sitting at the screen too long. Stepping away for a minute counts as a break.";
+"settings.movement.enable" = "Stand-up reminders";
+"settings.movement.interval" = "Sitting time";
+"settings.movement.interval.help" = "How long you can sit continuously before Dorso suggests standing up.";
+"analytics.movementBreaks" = "Movement Breaks";
+
+// MARK: - Smile
+
+"nudge.smile" = "Don\'t forget to smile 😊";
+"settings.smile" = "Smile";
+"settings.smile.help" = "A playful reminder to smile now and then — smiling relaxes your face after long focus. Detected on your Mac, never recorded.";
+"settings.smile.enable" = "Smile reminders";
+"settings.smile.interval" = "Remind after";
+"analytics.smiles" = "Smiles";
+"calibration.invalidData" = "Calibration didn't capture enough head movement to tell good posture from slouching. Sit at a comfortable distance and follow the targets by moving your head — not just your eyes — then try again.";

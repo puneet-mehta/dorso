@@ -41,6 +41,12 @@ extension AppDelegate {
         defaults.set(eyeCare.blinkSensitivity.rawValue, forKey: SettingsKeys.eyeCareBlinkSensitivity)
         defaults.set(eyeCare.restReminderEnabled, forKey: SettingsKeys.eyeCareRestReminder)
         defaults.set(Int(eyeCare.restIntervalSeconds / 60), forKey: SettingsKeys.eyeCareRestIntervalMinutes)
+        let movement = movementConfig
+        defaults.set(movement.movementReminderEnabled, forKey: SettingsKeys.movementReminder)
+        defaults.set(Int(movement.sittingIntervalSeconds / 60), forKey: SettingsKeys.movementIntervalMinutes)
+        let smile = smileConfig
+        defaults.set(smile.smileReminderEnabled, forKey: SettingsKeys.smileReminder)
+        defaults.set(Int(smile.smileIntervalSeconds / 60), forKey: SettingsKeys.smileIntervalMinutes)
     }
 
     func loadSettings() {
@@ -106,12 +112,32 @@ extension AppDelegate {
             let minutes = max(10, min(40, defaults.integer(forKey: SettingsKeys.eyeCareRestIntervalMinutes)))
             eyeCare.restIntervalSeconds = TimeInterval(minutes * 60)
         }
-        // Debug affordance: short cycles for manual testing of the 20-20-20 flow.
+        var movement = MovementConfig()
+        movement.movementReminderEnabled = defaults.bool(forKey: SettingsKeys.movementReminder)
+        if defaults.object(forKey: SettingsKeys.movementIntervalMinutes) != nil {
+            let minutes = max(15, min(120, defaults.integer(forKey: SettingsKeys.movementIntervalMinutes)))
+            movement.sittingIntervalSeconds = TimeInterval(minutes * 60)
+        }
+        var smile = SmileConfig()
+        smile.smileReminderEnabled = defaults.bool(forKey: SettingsKeys.smileReminder)
+        if defaults.object(forKey: SettingsKeys.smileIntervalMinutes) != nil {
+            let minutes = max(5, min(120, defaults.integer(forKey: SettingsKeys.smileIntervalMinutes)))
+            smile.smileIntervalSeconds = TimeInterval(minutes * 60)
+        }
+        // Debug affordance: short cycles for manual testing of the 20-20-20,
+        // stand-up, and smile flows.
         if CommandLine.arguments.contains("--eye-care-debug") {
             eyeCare.restIntervalSeconds = 60
             eyeCare.restDurationSeconds = 10
+            movement.sittingIntervalSeconds = 90
+            movement.promptMaxDuration = 30
+            movement.breakAwaySeconds = 10
+            smile.smileIntervalSeconds = 60
+            smile.promptMaxDuration = 10
         }
         applyTrackingAction(.setEyeCareConfiguration(eyeCare))
+        applyTrackingAction(.setMovementConfiguration(movement))
+        applyTrackingAction(.setSmileConfiguration(smile))
     }
 
     func saveProfile(forKey key: String, data: ProfileData) {

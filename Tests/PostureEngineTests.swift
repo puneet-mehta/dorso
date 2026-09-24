@@ -5,8 +5,21 @@ final class PostureEngineTests: XCTestCase {
 
     // MARK: - Test Helpers
 
-    func makeReading(bad: Bool, severity: Double = 0.5) -> PostureReading {
-        PostureReading(timestamp: Date(), isBadPosture: bad, severity: severity)
+    func makeReading(
+        bad: Bool,
+        severity: Double = 0.5,
+        cause: PostureWarningCause = .slouch
+    ) -> PostureReading {
+        PostureReading(timestamp: Date(), isBadPosture: bad, severity: severity, cause: cause)
+    }
+
+    func testWarningCausePropagatesToState() {
+        let result = PostureEngine.processReading(
+            makeReading(bad: true, severity: 0.6, cause: .forwardHead),
+            state: makeState(badFrames: 8),
+            config: makeConfig(frameThreshold: 1)
+        )
+        XCTAssertEqual(result.newState.warningCause, .forwardHead)
     }
 
     func makeState(

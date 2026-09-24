@@ -124,7 +124,7 @@ final class EyeCareTrackingFeatureTests: XCTestCase {
         let store = makeStore(initialState: initialState, recorder: recorder)
         let now = Date(timeIntervalSince1970: 1000)
 
-        await store.send(.eyeCareTick(now: now, isMarketingMode: false)) {
+        await store.send(.wellnessTick(now: now, isMarketingMode: false)) {
             $0.eyeCareState.screenSeconds = 1
         }
         await store.finish()
@@ -137,7 +137,7 @@ final class EyeCareTrackingFeatureTests: XCTestCase {
         initialState.eyeCareConfig = enabledConfig()
         let store = makeStore(initialState: initialState, recorder: recorder)
 
-        await store.send(.eyeCareTick(now: Date(), isMarketingMode: true))
+        await store.send(.wellnessTick(now: Date(), isMarketingMode: true))
         await store.finish()
         let intents = await recorder.drain()
         XCTAssertTrue(intents.isEmpty)
@@ -154,13 +154,121 @@ final class EyeCareTrackingFeatureTests: XCTestCase {
         let store = makeStore(initialState: initialState, recorder: recorder)
         let now = start.addingTimeInterval(initialState.eyeCareConfig.restDurationSeconds)
 
-        await store.send(.eyeCareTick(now: now, isMarketingMode: false)) {
+        await store.send(.wellnessTick(now: now, isMarketingMode: false)) {
             $0.eyeCareState.restPhase = .idle
             $0.eyeCareState.screenSeconds = 0
         }
         await store.finish()
         let intents = await recorder.drain()
         XCTAssertEqual(intents, [.recordEyeCareAnalytics(.restCompleted), .updateNudgeHUD])
+    }
+
+    // MARK: - Movement
+
+    @MainActor
+    func testWellnessTickDrivesMovementEngine() async {
+        let recorder = Recorder()
+        var initialState = TrackingFeature.State(appState: .monitoring)
+        var movement = MovementConfig()
+        movement.movementReminderEnabled = true
+        movement.sittingIntervalSeconds = 1
+        initialState.movementConfig = movement
+        let store = makeStore(initialState: initialState, recorder: recorder)
+        let now = Date(timeIntervalSince1970: 3000)
+
+        await store.send(.wellnessTick(now: now, isMarketingMode: false)) {
+            $0.movementState.sittingSeconds = 1
+            $0.movementState.phase = .prompting(startedAt: now)
+        }
+        await store.finish()
+        let intents = await recorder.drain()
+        XCTAssertEqual(intents, [.updateNudgeHUD])
+    }
+
+    @MainActor
+    func testDisablingMovementResetsState() async {
+        let recorder = Recorder()
+        var initialState = TrackingFeature.State(appState: .monitoring)
+        var movement = MovementConfig()
+        movement.movementReminderEnabled = true
+        initialState.movementConfig = movement
+        initialState.movementState.sittingSeconds = 500
+        let store = makeStore(initialState: initialState, recorder: recorder)
+
+        await store.send(.setMovementConfiguration(MovementConfig())) {
+            $0.movementConfig = MovementConfig()
+            $0.movementState = MovementState()
+        }
+        await store.finish()
+        let intents = await recorder.drain()
+        XCTAssertEqual(intents, [.updateNudgeHUD])
+    }
+
+    // MARK: - Smile
+
+    @MainActor
+    func testSmileActivityRecordsAndClearsPrompt() async {
+        let recorder = Recorder()
+        var initialState = TrackingFeature.State(appState: .monitoring)
+        var smile = SmileConfig()
+        smile.smileReminderEnabled = true
+        initialState.smileConfig = smile
+        initialState.smileState.secondsSinceSmile = 400
+        initialState.smileState.phase = .prompting(startedAt: Date(timeIntervalSince1970: 4000))
+        let store = makeStore(initialState: initialState, recorder: recorder)
+        let sample = BlinkActivitySample(
+            timestamp: Date(timeIntervalSince1970: 4005),
+            blinkCount: 0,
+            validSampleRatio: 1,
+            smileCount: 1
+        )
+
+        await store.send(.blinkActivityReceived(sample, isMarketingMode: false)) {
+            $0.smileState.secondsSinceSmile = 0
+            $0.smileState.phase = .idle
+        }
+        await store.finish()
+        let intents = await recorder.drain()
+        XCTAssertEqual(intents, [.recordEyeCareAnalytics(.smile), .updateNudgeHUD])
+    }
+
+    @MainActor
+    func testWellnessTickDrivesSmileEngine() async {
+        let recorder = Recorder()
+        var initialState = TrackingFeature.State(appState: .monitoring)
+        var smile = SmileConfig()
+        smile.smileReminderEnabled = true
+        smile.smileIntervalSeconds = 1
+        initialState.smileConfig = smile
+        let store = makeStore(initialState: initialState, recorder: recorder)
+        let now = Date(timeIntervalSince1970: 5000)
+
+        await store.send(.wellnessTick(now: now, isMarketingMode: false)) {
+            $0.smileState.secondsSinceSmile = 1
+            $0.smileState.phase = .prompting(startedAt: now)
+        }
+        await store.finish()
+        let intents = await recorder.drain()
+        XCTAssertEqual(intents, [.updateNudgeHUD])
+    }
+
+    @MainActor
+    func testDisablingSmileResetsState() async {
+        let recorder = Recorder()
+        var initialState = TrackingFeature.State(appState: .monitoring)
+        var smile = SmileConfig()
+        smile.smileReminderEnabled = true
+        initialState.smileConfig = smile
+        initialState.smileState.secondsSinceSmile = 100
+        let store = makeStore(initialState: initialState, recorder: recorder)
+
+        await store.send(.setSmileConfiguration(SmileConfig())) {
+            $0.smileConfig = SmileConfig()
+            $0.smileState = SmileState()
+        }
+        await store.finish()
+        let intents = await recorder.drain()
+        XCTAssertEqual(intents, [.updateNudgeHUD])
     }
 
     // MARK: - State exit reset

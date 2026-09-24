@@ -51,6 +51,10 @@ struct SettingsView: View {
     @State private var eyeCareBlinkSensitivity: BlinkSensitivity
     @State private var eyeCareRestReminder: Bool
     @State private var eyeCareRestInterval: Double
+    @State private var movementReminder: Bool
+    @State private var movementInterval: Double
+    @State private var smileReminder: Bool
+    @State private var smileInterval: Double
     @State private var showingDeleteConfirmation = false
     @State private var newProfileName = ""
 
@@ -112,6 +116,12 @@ struct SettingsView: View {
         _eyeCareBlinkSensitivity = State(initialValue: eyeCare.blinkSensitivity)
         _eyeCareRestReminder = State(initialValue: eyeCare.restReminderEnabled)
         _eyeCareRestInterval = State(initialValue: eyeCare.restIntervalSeconds / 60)
+        let movement = appDelegate.movementConfig
+        _movementReminder = State(initialValue: movement.movementReminderEnabled)
+        _movementInterval = State(initialValue: movement.sittingIntervalSeconds / 60)
+        let smile = appDelegate.smileConfig
+        _smileReminder = State(initialValue: smile.smileReminderEnabled)
+        _smileInterval = State(initialValue: smile.smileIntervalSeconds / 60)
         _toggleShortcut = State(initialValue: appDelegate.toggleShortcut)
         _detectionModeSlider = State(initialValue: Double(detectionModes.firstIndex(of: profileDetectionMode) ?? 0))
         _trackingSource = State(initialValue: appDelegate.trackingSource)
@@ -184,6 +194,11 @@ struct SettingsView: View {
                 }
             }
             .padding(.bottom, 12)
+
+            // Two top-aligned columns so the window grows sideways, not
+            // endlessly downward: posture setup on the left, behavior and
+            // wellness features on the right.
+            HStack(alignment: .top, spacing: 12) {
 
             VStack(spacing: 10) {
 
@@ -485,6 +500,48 @@ struct SettingsView: View {
                 }
             }
 
+            // Movement: stand-up reminders after too much continuous sitting
+            SettingsCard(icon: "figure.walk", title: L("settings.movement"), helpText: L("settings.movement.help")) {
+                VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 0) {
+                    CompactToggle(
+                        title: L("settings.movement.enable"),
+                        helpText: L("settings.movement.help"),
+                        isOn: $movementReminder
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .onChange(of: movementReminder) { newValue in
+                        Task { @MainActor in
+                            await appDelegate.updateMovementConfig { $0.movementReminderEnabled = newValue }
+                        }
+                    }
+                }
+
+                if movementReminder {
+                    CompactSlider(
+                        title: L("settings.movement.interval"),
+                        helpText: L("settings.movement.interval.help"),
+                        value: $movementInterval,
+                        range: 15...120,
+                        step: 15,
+                        valueLabel: L("settings.eyeCare.restInterval.value", Int(movementInterval))
+                    )
+                    .onChange(of: movementInterval) { newValue in
+                        Task { @MainActor in
+                            await appDelegate.updateMovementConfig {
+                                $0.sittingIntervalSeconds = newValue * 60
+                            }
+                        }
+                    }
+                }
+                }
+            }
+
+            }
+            .frame(maxWidth: .infinity, alignment: .top)
+
+            VStack(spacing: 10) {
+
             // Behavior card: appearance in the header (matching the other
             // cards' header-control pattern), app-level toggles below
             SettingsCard(icon: "switch.2", title: L("settings.section.behavior")) {
@@ -742,10 +799,53 @@ struct SettingsView: View {
                 }
             }
 
+            // Smile: a playful reminder not to forget to smile (camera only)
+            SettingsCard(icon: "face.smiling", title: L("settings.smile"), helpText: L("settings.smile.help")) {
+                VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 0) {
+                    CompactToggle(
+                        title: L("settings.smile.enable"),
+                        helpText: activeSource == .airpods
+                            ? L("settings.eyeCare.blinkNudge.cameraOnly")
+                            : L("settings.smile.help"),
+                        isOn: $smileReminder,
+                        isDisabled: activeSource == .airpods
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .onChange(of: smileReminder) { newValue in
+                        Task { @MainActor in
+                            await appDelegate.updateSmileConfig { $0.smileReminderEnabled = newValue }
+                        }
+                    }
+                }
+
+                if smileReminder {
+                    CompactSlider(
+                        title: L("settings.smile.interval"),
+                        helpText: L("settings.smile.help"),
+                        value: $smileInterval,
+                        range: 5...120,
+                        step: 5,
+                        valueLabel: L("settings.eyeCare.restInterval.value", Int(smileInterval))
+                    )
+                    .onChange(of: smileInterval) { newValue in
+                        Task { @MainActor in
+                            await appDelegate.updateSmileConfig {
+                                $0.smileIntervalSeconds = newValue * 60
+                            }
+                        }
+                    }
+                }
+                }
+            }
+
+            }
+            .frame(maxWidth: .infinity, alignment: .top)
+
             }
         }
         .padding(16)
-        .frame(width: 480)
+        .frame(width: 952)
         .fixedSize(horizontal: false, vertical: true)
         .alert(L("settings.profile.newTitle"), isPresented: $showingNewProfilePrompt) {
             TextField(L("settings.profile.namePlaceholder"), text: $newProfileName)

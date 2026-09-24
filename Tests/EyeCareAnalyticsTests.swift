@@ -30,6 +30,8 @@ final class EyeCareAnalyticsTests: XCTestCase {
         XCTAssertEqual(stats.slouchCount, 7)
         XCTAssertEqual(stats.blinkNudgeCount, 0)
         XCTAssertEqual(stats.restBreaksCompleted, 0)
+        XCTAssertEqual(stats.movementBreaksCompleted, 0)
+        XCTAssertEqual(stats.smileCount, 0)
     }
 
     func testEyeCareFieldsRoundTrip() throws {
@@ -61,6 +63,24 @@ final class EyeCareAnalyticsTests: XCTestCase {
         queue.sync {}
         XCTAssertEqual(manager.todayStats.restBreaksCompleted, 1)
         XCTAssertEqual(manager.todayStats.blinkNudgeCount, 0)
+    }
+
+    func testRecordMovementBreakIncrementsToday() {
+        let queue = DispatchQueue(label: "test.eyecare.analytics")
+        let manager = makeManager(fileURL: tempFileURL(), queue: queue)
+        manager.recordMovementBreak()
+        queue.sync {}
+        XCTAssertEqual(manager.todayStats.movementBreaksCompleted, 1)
+    }
+
+    func testRecordSmileIncrementsToday() {
+        let queue = DispatchQueue(label: "test.eyecare.analytics")
+        let manager = makeManager(fileURL: tempFileURL(), queue: queue)
+        manager.recordSmile()
+        manager.recordSmile()
+        manager.recordSmile()
+        queue.sync {}
+        XCTAssertEqual(manager.todayStats.smileCount, 3)
     }
 
     func testMarketingDataIncludesEyeCareValues() {

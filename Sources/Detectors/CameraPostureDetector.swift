@@ -91,23 +91,34 @@ class CameraPostureDetector: NSObject, PostureDetector {
 
     // MARK: - Blink Detection
 
-    /// Camera-only signal (like onAwayStateChange): when enabled, eye
-    /// landmarks are sampled at ~15 fps independent of the posture throttle
-    /// and aggregated into 1 Hz BlinkActivitySamples delivered on main.
-    var isBlinkDetectionEnabled = false {
+    /// Camera-only signals (like onAwayStateChange): when either analysis
+    /// is enabled, face landmarks are sampled at ~15 fps independent of the
+    /// posture throttle and aggregated into 1 Hz BlinkActivitySamples
+    /// delivered on main. Blink and smile share the same Vision pass.
+    var analyzesBlink = false {
         didSet {
-            if isBlinkDetectionEnabled != oldValue {
+            if analyzesBlink != oldValue {
                 captureQueue.async { [weak self] in self?.resetBlinkAggregation() }
             }
         }
     }
+    var analyzesSmile = false {
+        didSet {
+            if analyzesSmile != oldValue {
+                captureQueue.async { [weak self] in self?.resetBlinkAggregation() }
+            }
+        }
+    }
+    var isFaceAnalysisEnabled: Bool { analyzesBlink || analyzesSmile }
     var onBlinkActivity: ((BlinkActivitySample) -> Void)?
 
     private var lastBlinkFrameTime: Date = .distantPast
     private let blinkFrameInterval: TimeInterval = 1.0 / 15.0
     private var blinkProcessor = BlinkEARProcessor()
+    private var smileProcessor = SmileScoreProcessor()
     private var blinkWindowStart: Date?
     private var blinkWindowBlinkCount = 0
+    private var blinkWindowSmileCount = 0
     private var blinkWindowFrameCount = 0
     private var blinkWindowValidCount = 0
 
@@ -146,6 +157,55 @@ class CameraPostureDetector: NSObject, PostureDetector {
     private var noseYHistory: [CGFloat] = []
     private let smoothingWindow = 5
     private var isCurrentlySlouching = false
+
+    // MARK: - Baseline Re-anchoring
+    //
+    // Calibration stores absolute nose positions, but the user's real
+    // sitting position drifts between sessions (chair height, lid angle,
+    // distance). Detecting against stale absolute positions makes the app
+    // either fire constantly (band above the user) or never (band below).
+    // Instead, keep the calibrated *range* and re-center it on where the
+    // user actually sits when monitoring starts or they return to the desk.
+    private var anchorSamples: [CGFloat] = []
+    private var baselineOffset: CGFloat = 0
+    private var anchorEstablished = false
+    private let anchorSampleCount = 8
+    /// The anchor window must be this settled before it's trusted -
+    /// otherwise a re-anchor triggered mid-motion (a lid still tilting)
+    /// locks onto a transient position.
+    private let anchorStabilityWobble: CGFloat = 0.03
+    /// Give up waiting for stability after this many samples and anchor on
+    /// the latest window (a genuinely fidgety user still gets monitoring).
+    private let anchorMaxSamples = 40
+    /// Heals the baseline when the camera itself moves mid-session (lid
+    /// tilt): sustained, rock-stable readings far outside the calibrated
+    /// band re-anchor it. See BaselineDriftMonitor.
+    private var driftMonitor = BaselineDriftMonitor()
+
+    // Fast path for the same problem: when the nose jumps between frames,
+    // register the two frames against each other. A lid tilt moves the
+    // whole scene (background included); a slouching human moves against a
+    // static background. Global motion => camera moved => re-anchor now.
+    private var previousPixelBuffer: CVPixelBuffer?
+    private var lastCameraMotionReset: Date = .distantPast
+    private let cameraMotionNoseJump: CGFloat = 0.02
+    private let cameraMotionGlobalShift: CGFloat = 0.02
+    private let cameraMotionCooldown: TimeInterval = 5
+
+    /// Median of the observed upright samples relative to the calibrated
+    /// upright position. Pure for testability.
+    static func anchorOffset(samples: [CGFloat], goodPostureY: CGFloat) -> CGFloat {
+        guard !samples.isEmpty else { return 0 }
+        let sorted = samples.sorted()
+        return sorted[sorted.count / 2] - goodPostureY
+    }
+
+    private func resetBaselineAnchor() {
+        anchorSamples = []
+        baselineOffset = 0
+        anchorEstablished = false
+        driftMonitor.reset()
+    }
 
     // Frame throttling
     private var lastFrameTime: Date = .distantPast
@@ -257,7 +317,10 @@ class CameraPostureDetector: NSObject, PostureDetector {
         isMonitoring = false
         consecutiveNoDetectionFrames = 0
         isAway = false
-        captureQueue.async { [weak self] in self?.resetBlinkAggregation() }
+        captureQueue.async { [weak self] in
+            self?.resetBlinkAggregation()
+            self?.previousPixelBuffer = nil
+        }
     }
 
     // MARK: - Calibration
@@ -316,6 +379,7 @@ class CameraPostureDetector: NSObject, PostureDetector {
         self.isCurrentlySlouching = false
         self.noseYHistory.removeAll()
         self.consecutiveNoDetectionFrames = 0
+        resetBaselineAnchor()
         self.isAway = false
 
         os_log(.info, log: log, "Started monitoring with intensity=%.2f, deadZone=%.2f", intensity, deadZone)
@@ -485,6 +549,7 @@ class CameraPostureDetector: NSObject, PostureDetector {
     // MARK: - Frame Processing
 
     private func processFrame(_ pixelBuffer: CVPixelBuffer) {
+        let noseYBeforeFrame = currentNoseY
         let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .up, options: [:])
 
         let bodyRequest = VNDetectHumanBodyPoseRequest { [weak self] request, error in
@@ -499,6 +564,40 @@ class CameraPostureDetector: NSObject, PostureDetector {
             try handler.perform([bodyRequest])
         } catch {
             tryFaceDetection(pixelBuffer: pixelBuffer)
+        }
+
+        // The Vision requests above run synchronously, so currentNoseY is
+        // already updated for this frame.
+        detectCameraMotionIfNeeded(pixelBuffer, noseDelta: currentNoseY - noseYBeforeFrame)
+        previousPixelBuffer = pixelBuffer
+    }
+
+    /// If the apparent nose jump is matched by the whole frame shifting,
+    /// the camera moved (lid tilt) - reset the baseline anchor so the next
+    /// readings re-establish upright at the new geometry (~1-2s).
+    private func detectCameraMotionIfNeeded(_ pixelBuffer: CVPixelBuffer, noseDelta: CGFloat) {
+        guard isMonitoring, anchorEstablished,
+              abs(noseDelta) > cameraMotionNoseJump,
+              let previous = previousPixelBuffer,
+              Date().timeIntervalSince(lastCameraMotionReset) > cameraMotionCooldown else { return }
+
+        let request = VNTranslationalImageRegistrationRequest(targetedCVPixelBuffer: pixelBuffer)
+        let handler = VNImageRequestHandler(cvPixelBuffer: previous, orientation: .up, options: [:])
+        guard (try? handler.perform([request])) != nil,
+              let observation = request.results?.first else { return }
+
+        let height = CGFloat(CVPixelBufferGetHeight(pixelBuffer))
+        guard height > 0 else { return }
+        let globalShift = abs(observation.alignmentTransform.ty) / height
+
+        if globalShift > cameraMotionGlobalShift {
+            lastCameraMotionReset = Date()
+            os_log(.info, log: log, "Camera motion detected (scene shift %.3f, nose jump %.3f) - re-anchoring baseline", globalShift, noseDelta)
+            if let f = Self.postureDebugLog {
+                fputs("\(Date().timeIntervalSince1970) CAMERA-MOTION shift=\(globalShift) noseDelta=\(noseDelta) -> anchor reset\n", f)
+                fflush(f)
+            }
+            resetBaselineAnchor()
         }
     }
 
@@ -533,6 +632,7 @@ class CameraPostureDetector: NSObject, PostureDetector {
         let request = VNDetectFaceLandmarksRequest()
 
         var ear: Double?
+        var mouthAspect: Double?
         if (try? handler.perform([request])) != nil,
            let face = request.results?.first,
            let landmarks = face.landmarks {
@@ -546,19 +646,31 @@ class CameraPostureDetector: NSObject, PostureDetector {
             if !ears.isEmpty {
                 ear = ears.reduce(0, +) / Double(ears.count)
             }
+            mouthAspect = landmarks.outerLips.flatMap {
+                SmileScoreProcessor.mouthAspect(points: $0.normalizedPoints)
+            }
         }
 
-        let output = blinkProcessor.ingest(ear: ear)
-        accumulateBlinkSample(output, at: timestamp)
+        let blinkOutput = analyzesBlink ? blinkProcessor.ingest(ear: ear) : nil
+        let smileOutput = analyzesSmile ? smileProcessor.ingest(aspect: mouthAspect) : nil
+        accumulateFaceSample(blink: blinkOutput, smile: smileOutput, at: timestamp)
     }
 
-    private func accumulateBlinkSample(_ output: BlinkEARProcessor.Output, at timestamp: Date) {
+    private func accumulateFaceSample(
+        blink: BlinkEARProcessor.Output?,
+        smile: SmileScoreProcessor.Output?,
+        at timestamp: Date
+    ) {
         if blinkWindowStart == nil {
             blinkWindowStart = timestamp
         }
         blinkWindowFrameCount += 1
-        if output.isValidSample { blinkWindowValidCount += 1 }
-        if output.blinkDetected { blinkWindowBlinkCount += 1 }
+        // Validity feeds the blink-rate coverage bail-out; use the smile
+        // pass's validity only when blink analysis is off.
+        let isValid = blink?.isValidSample ?? smile?.isValidSample ?? false
+        if isValid { blinkWindowValidCount += 1 }
+        if blink?.blinkDetected == true { blinkWindowBlinkCount += 1 }
+        if smile?.smileDetected == true { blinkWindowSmileCount += 1 }
 
         guard let windowStart = blinkWindowStart,
               timestamp.timeIntervalSince(windowStart) >= 1.0 else { return }
@@ -566,10 +678,12 @@ class CameraPostureDetector: NSObject, PostureDetector {
         let sample = BlinkActivitySample(
             timestamp: timestamp,
             blinkCount: blinkWindowBlinkCount,
-            validSampleRatio: Double(blinkWindowValidCount) / Double(max(1, blinkWindowFrameCount))
+            validSampleRatio: Double(blinkWindowValidCount) / Double(max(1, blinkWindowFrameCount)),
+            smileCount: blinkWindowSmileCount
         )
         blinkWindowStart = timestamp
         blinkWindowBlinkCount = 0
+        blinkWindowSmileCount = 0
         blinkWindowFrameCount = 0
         blinkWindowValidCount = 0
 
@@ -580,8 +694,10 @@ class CameraPostureDetector: NSObject, PostureDetector {
 
     private func resetBlinkAggregation() {
         blinkProcessor.reset()
+        smileProcessor.reset()
         blinkWindowStart = nil
         blinkWindowBlinkCount = 0
+        blinkWindowSmileCount = 0
         blinkWindowFrameCount = 0
         blinkWindowValidCount = 0
         lastBlinkFrameTime = .distantPast
@@ -600,11 +716,15 @@ class CameraPostureDetector: NSObject, PostureDetector {
         if blurWhenAway, isAway {
             isAway = false
             onAwayStateChange?(false)
+            resetBaselineAnchor()
         }
 
         // Evaluate posture if monitoring
         if isMonitoring, let calibration = calibrationData {
             evaluatePosture(currentY: noseY, currentFaceWidth: faceWidth ?? 0, calibration: calibration)
+        } else if let f = Self.postureDebugLog {
+            fputs("\(Date().timeIntervalSince1970) detection y=\(noseY) but monitoring=\(isMonitoring) calibration=\(calibrationData != nil)\n", f)
+            fflush(f)
         }
     }
 
@@ -629,11 +749,64 @@ class CameraPostureDetector: NSObject, PostureDetector {
         return noseYHistory.reduce(0, +) / CGFloat(noseYHistory.count)
     }
 
+    /// Dev diagnostic: `--posture-debug` appends per-reading detection math
+    /// to /tmp/dorso-posture-debug.log so live behavior can be inspected.
+    private static let postureDebugLog: UnsafeMutablePointer<FILE>? =
+        CommandLine.arguments.contains("--posture-debug")
+            ? fopen("/tmp/dorso-posture-debug.log", "a") : nil
+
     private func evaluatePosture(currentY: CGFloat, currentFaceWidth: CGFloat, calibration: CameraCalibrationData) {
         let smoothedY = smoothNoseY(currentY)
 
-        // Vertical position detection (slouching down)
-        let slouchAmount = calibration.badPostureY - smoothedY
+        // Establish the session baseline from the first readings: assume
+        // the user is roughly upright when monitoring (re)starts and shift
+        // the calibrated band to their current position.
+        if !anchorEstablished {
+            anchorSamples.append(smoothedY)
+            let window = Array(anchorSamples.suffix(anchorSampleCount))
+            let windowIsFull = window.count == anchorSampleCount
+            let windowIsStable = windowIsFull
+                && (window.max()! - window.min()!) <= anchorStabilityWobble
+            let timedOut = anchorSamples.count >= anchorMaxSamples
+            guard windowIsStable || timedOut else {
+                DispatchQueue.main.async {
+                    self.onPostureReading?(PostureReading(timestamp: Date(), isBadPosture: false, severity: 0))
+                }
+                return
+            }
+            baselineOffset = Self.anchorOffset(samples: window, goodPostureY: calibration.goodPostureY)
+            anchorEstablished = true
+            anchorSamples = []
+            os_log(.info, log: log, "Posture baseline re-anchored: offset %.3f (stable=%d)", baselineOffset, windowIsStable ? 1 : 0)
+            if let f = Self.postureDebugLog {
+                fputs("\(Date().timeIntervalSince1970) ANCHOR offset=\(baselineOffset) stable=\(windowIsStable)\n", f)
+                fflush(f)
+            }
+        }
+
+        // Vertical position detection (slouching down), against the
+        // re-anchored band
+        let effectiveBadPostureY = calibration.badPostureY + baselineOffset
+        let effectiveGoodPostureY = calibration.goodPostureY + baselineOffset
+        let slouchAmount = effectiveBadPostureY - smoothedY
+
+        // Mid-session camera moves (lid tilt) shift the whole frame and
+        // would otherwise pin a false warning (or silently blind detection)
+        // until recalibration. Readings far beyond the band in either
+        // direction feed the drift monitor; a sustained stable stretch
+        // re-anchors the baseline to where the user actually is.
+        let farMargin = max(calibration.postureRange, 0.05)
+        let isFarOutside = slouchAmount > farMargin
+            || smoothedY > effectiveGoodPostureY + farMargin
+        if let stableY = driftMonitor.ingest(y: smoothedY, at: Date(), isFarOutside: isFarOutside) {
+            baselineOffset = stableY - calibration.goodPostureY
+            isCurrentlySlouching = false
+            os_log(.info, log: log, "Camera drift detected - baseline re-anchored to offset %.3f", baselineOffset)
+            DispatchQueue.main.async {
+                self.onPostureReading?(PostureReading(timestamp: Date(), isBadPosture: false, severity: 0))
+            }
+            return
+        }
         let deadZoneThreshold = deadZone * calibration.postureRange
 
         let enterThreshold = deadZoneThreshold
@@ -657,6 +830,7 @@ class CameraPostureDetector: NSObject, PostureDetector {
 
         // Calculate combined severity
         var severity: Double = 0.0
+        var cause: PostureWarningCause = .slouch
 
         if isBadPosture {
             // Vertical severity
@@ -664,11 +838,12 @@ class CameraPostureDetector: NSObject, PostureDetector {
             let remainingRange = max(0.01, calibration.postureRange - deadZoneThreshold)
             let verticalSeverity = min(1.0, max(0.0, pastDeadZone / remainingRange))
 
+            // Forward-head severity scales from 0 at the threshold rather
+            // than jumping to a floor value: a marginal lean toward the
+            // screen produces a marginal warning, not a mid-strength one.
             severity = max(Double(verticalSeverity), forwardHeadSeverity)
-
-            // Ensure minimum severity when forward-head posture is detected
-            if forwardHeadSeverity > 0 && severity < CameraCalibrationData.forwardHeadMinSeverity {
-                severity = CameraCalibrationData.forwardHeadMinSeverity
+            if forwardHeadSeverity > Double(verticalSeverity) {
+                cause = .forwardHead
             }
         }
 
@@ -679,10 +854,23 @@ class CameraPostureDetector: NSObject, PostureDetector {
             isCurrentlySlouching = false
         }
 
+        if let f = Self.postureDebugLog {
+            let line = String(
+                format: "%.1f y=%.3f badY=%.3f offset=%.3f range=%.3f thr=%.4f slouchAmt=%.4f faceW=%.3f neutralW=%.3f fwSev=%.2f bad=%d sev=%.2f\n",
+                Date().timeIntervalSince1970, smoothedY, effectiveBadPostureY, baselineOffset,
+                calibration.postureRange, threshold, slouchAmount,
+                currentFaceWidth, calibration.neutralFaceWidth,
+                forwardHeadSeverity, isBadPosture ? 1 : 0, severity
+            )
+            fputs(line, f)
+            fflush(f)
+        }
+
         let reading = PostureReading(
             timestamp: Date(),
             isBadPosture: isBadPosture,
-            severity: severity
+            severity: severity,
+            cause: cause
         )
 
         DispatchQueue.main.async {
@@ -701,7 +889,7 @@ extension CameraPostureDetector: AVCaptureVideoDataOutputSampleBufferDelegate {
 
         // Blink sampling runs on its own, faster cadence (blinks last only
         // 100-300 ms) and is independent of the posture throttle below.
-        if isBlinkDetectionEnabled, now.timeIntervalSince(lastBlinkFrameTime) >= blinkFrameInterval {
+        if isFaceAnalysisEnabled, now.timeIntervalSince(lastBlinkFrameTime) >= blinkFrameInterval {
             lastBlinkFrameTime = now
             autoreleasepool {
                 processBlinkFrame(pixelBuffer, at: now)

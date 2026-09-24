@@ -38,12 +38,14 @@ struct TrackingFeature: Reducer {
         case showCameraCalibrationRetryAlert(message: String?)
         case retryCalibration
         case updateNudgeHUD
-        case recordEyeCareAnalytics(EyeCareAnalyticsEvent)
+        case recordEyeCareAnalytics(WellnessAnalyticsEvent)
     }
 
-    enum EyeCareAnalyticsEvent: Equatable {
+    enum WellnessAnalyticsEvent: Equatable {
         case blinkNudge
         case restCompleted
+        case movementBreak
+        case smile
     }
 
     struct State: Equatable {
@@ -66,6 +68,10 @@ struct TrackingFeature: Reducer {
         var isOnBattery: Bool = false
         var eyeCareConfig = EyeCareConfig()
         var eyeCareState = EyeCareState()
+        var movementConfig = MovementConfig()
+        var movementState = MovementState()
+        var smileConfig = SmileConfig()
+        var smileState = SmileState()
 
         init(
             appState: AppState = .disabled,
@@ -83,7 +89,11 @@ struct TrackingFeature: Reducer {
             pauseOnBatteryEnabled: Bool = false,
             isOnBattery: Bool = false,
             eyeCareConfig: EyeCareConfig = EyeCareConfig(),
-            eyeCareState: EyeCareState = EyeCareState()
+            eyeCareState: EyeCareState = EyeCareState(),
+            movementConfig: MovementConfig = MovementConfig(),
+            movementState: MovementState = MovementState(),
+            smileConfig: SmileConfig = SmileConfig(),
+            smileState: SmileState = SmileState()
         ) {
             self.appState = appState
             self.trackingMode = trackingMode
@@ -101,6 +111,10 @@ struct TrackingFeature: Reducer {
             self.isOnBattery = isOnBattery
             self.eyeCareConfig = eyeCareConfig
             self.eyeCareState = eyeCareState
+            self.movementConfig = movementConfig
+            self.movementState = movementState
+            self.smileConfig = smileConfig
+            self.smileState = smileState
         }
 
         func readiness(for source: TrackingSource) -> TrackingSourceReadiness {
@@ -135,8 +149,10 @@ struct TrackingFeature: Reducer {
         case pauseOnTheGoSettingChanged(isEnabled: Bool)
         case postureReadingReceived(PostureReading, isMarketingMode: Bool)
         case setEyeCareConfiguration(EyeCareConfig)
+        case setMovementConfiguration(MovementConfig)
+        case setSmileConfiguration(SmileConfig)
         case blinkActivityReceived(BlinkActivitySample, isMarketingMode: Bool)
-        case eyeCareTick(now: Date, isMarketingMode: Bool)
+        case wellnessTick(now: Date, isMarketingMode: Bool)
         case awayStateChanged(Bool, isMarketingMode: Bool)
         case initialSetupEvaluated(
             isMarketingMode: Bool,
@@ -200,6 +216,19 @@ struct TrackingFeature: Reducer {
         perform(intents)
     }
 
+    private func appendSmileIntents(_ effects: [SmileEffect], to intents: inout [EffectIntent]) {
+        for effect in effects {
+            switch effect {
+            case .updateNudgeHUD:
+                if !intents.contains(.updateNudgeHUD) {
+                    intents.append(.updateNudgeHUD)
+                }
+            case .recordSmile:
+                intents.append(.recordEyeCareAnalytics(.smile))
+            }
+        }
+    }
+
     private func eyeCareIntents(for effects: [EyeCareEffect]) -> [EffectIntent] {
         effects.map { effect in
             switch effect {
@@ -220,6 +249,8 @@ struct TrackingFeature: Reducer {
                     state.monitoringState.reset()
                     state.lastPostureReadingTime = nil
                     state.eyeCareState.reset()
+                    state.movementState.reset()
+                    state.smileState.reset()
                 }
                 return effect
             }
@@ -370,20 +401,76 @@ struct TrackingFeature: Reducer {
                     isAway: state.monitoringState.isCurrentlyAway
                 )
                 state.eyeCareState = result.newState
-                return finish(perform(eyeCareIntents(for: result.effects)))
+                var intents = eyeCareIntents(for: result.effects)
 
-            case let .eyeCareTick(now, isMarketingMode):
+                let smileResult = SmileEngine.processActivity(
+                    sample,
+                    state: state.smileState,
+                    config: state.smileConfig
+                )
+                state.smileState = smileResult.newState
+                appendSmileIntents(smileResult.effects, to: &intents)
+                return finish(perform(intents))
+
+            case let .setMovementConfiguration(config):
+                state.movementConfig = config
+                if !config.movementReminderEnabled {
+                    state.movementState.reset()
+                    return finish(perform(.updateNudgeHUD))
+                }
+                return finish()
+
+            case let .setSmileConfiguration(config):
+                state.smileConfig = config
+                if !config.smileReminderEnabled {
+                    state.smileState.reset()
+                    return finish(perform(.updateNudgeHUD))
+                }
+                return finish()
+
+            case let .wellnessTick(now, isMarketingMode):
                 guard state.appState.isActive, !isMarketingMode else { return finish() }
 
-                let result = EyeCareEngine.processTick(
+                let eyeResult = EyeCareEngine.processTick(
                     now: now,
                     state: state.eyeCareState,
                     config: state.eyeCareConfig,
                     appState: state.appState,
                     isAway: state.monitoringState.isCurrentlyAway
                 )
-                state.eyeCareState = result.newState
-                return finish(perform(eyeCareIntents(for: result.effects)))
+                state.eyeCareState = eyeResult.newState
+
+                let movementResult = MovementEngine.processTick(
+                    now: now,
+                    state: state.movementState,
+                    config: state.movementConfig,
+                    appState: state.appState,
+                    isAway: state.monitoringState.isCurrentlyAway
+                )
+                state.movementState = movementResult.newState
+
+                let smileResult = SmileEngine.processTick(
+                    now: now,
+                    state: state.smileState,
+                    config: state.smileConfig,
+                    appState: state.appState,
+                    isAway: state.monitoringState.isCurrentlyAway
+                )
+                state.smileState = smileResult.newState
+
+                var intents = eyeCareIntents(for: eyeResult.effects)
+                for effect in movementResult.effects {
+                    switch effect {
+                    case .updateNudgeHUD:
+                        if !intents.contains(.updateNudgeHUD) {
+                            intents.append(.updateNudgeHUD)
+                        }
+                    case .recordMovementBreak:
+                        intents.append(.recordEyeCareAnalytics(.movementBreak))
+                    }
+                }
+                appendSmileIntents(smileResult.effects, to: &intents)
+                return finish(perform(intents))
 
             case let .initialSetupEvaluated(
                 isMarketingMode,

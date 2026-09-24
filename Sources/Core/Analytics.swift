@@ -11,6 +11,8 @@ struct DailyStats: Codable, Identifiable {
     var slouchCount: Int
     var blinkNudgeCount: Int = 0
     var restBreaksCompleted: Int = 0
+    var movementBreaksCompleted: Int = 0
+    var smileCount: Int = 0
     
     var dayKey: String {
         Self.dayKey(for: date)
@@ -34,7 +36,7 @@ struct DailyStats: Codable, Identifiable {
 extension DailyStats {
     private enum CodingKeys: String, CodingKey {
         case date, totalSeconds, slouchSeconds, slouchCount
-        case blinkNudgeCount, restBreaksCompleted
+        case blinkNudgeCount, restBreaksCompleted, movementBreaksCompleted, smileCount
     }
 
     init(from decoder: Decoder) throws {
@@ -46,6 +48,8 @@ extension DailyStats {
         // Files written before eye care existed lack these keys.
         blinkNudgeCount = try container.decodeIfPresent(Int.self, forKey: .blinkNudgeCount) ?? 0
         restBreaksCompleted = try container.decodeIfPresent(Int.self, forKey: .restBreaksCompleted) ?? 0
+        movementBreaksCompleted = try container.decodeIfPresent(Int.self, forKey: .movementBreaksCompleted) ?? 0
+        smileCount = try container.decodeIfPresent(Int.self, forKey: .smileCount) ?? 0
     }
 }
 
@@ -261,6 +265,24 @@ class AnalyticsManager: ObservableObject {
         markDirty()
         saveHistory()
     }
+
+    func recordMovementBreak() {
+        checkDayRollover()
+        todayStats.movementBreaksCompleted += 1
+        let key = DailyStats.dayKey(for: todayStats.date, calendar: calendar)
+        history[key] = todayStats
+        markDirty()
+        saveHistory()
+    }
+
+    func recordSmile() {
+        checkDayRollover()
+        todayStats.smileCount += 1
+        let key = DailyStats.dayKey(for: todayStats.date, calendar: calendar)
+        history[key] = todayStats
+        markDirty()
+        // Smiles are frequent; the 60s autosave timer picks them up.
+    }
     
     // MARK: - Data Retrieval
     
@@ -369,6 +391,8 @@ class AnalyticsManager: ObservableObject {
             // Plausible eye care demo data scaled to screen time.
             stats.restBreaksCompleted = max(1, Int(point.hours * 2.2))
             stats.blinkNudgeCount = max(0, point.slouchCount / 3)
+            stats.movementBreaksCompleted = max(1, Int(point.hours * 1.1))
+            stats.smileCount = max(3, Int(point.hours * 6.5))
             history[key] = stats
             if point.daysAgo == 0 { todayStats = stats }
         }

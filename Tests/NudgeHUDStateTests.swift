@@ -19,6 +19,43 @@ final class NudgeHUDStateTests: XCTestCase {
         XCTAssertNil(hud.text)
     }
 
+    func testHiddenBelowLabelThreshold() {
+        // The intensity-shaping curve crushes marginal severities to
+        // near-zero; the label must never surface warnings the visual
+        // doesn't show.
+        let hud = NudgeHUDState.derive(
+            postureIntensity: NudgeHUDState.labelThreshold - 0.01,
+            blinkIntensity: NudgeHUDState.labelThreshold - 0.01,
+            restPhase: .idle,
+            now: t0,
+            restDuration: 20
+        )
+        XCTAssertNil(hud.text)
+    }
+
+    func testShowsExactlyAtLabelThreshold() {
+        let hud = NudgeHUDState.derive(
+            postureIntensity: NudgeHUDState.labelThreshold,
+            blinkIntensity: 0,
+            restPhase: .idle,
+            now: t0,
+            restDuration: 20
+        )
+        XCTAssertEqual(hud.text, L("nudge.posture"))
+    }
+
+    func testForwardHeadCauseGetsItsOwnLabel() {
+        let hud = NudgeHUDState.derive(
+            postureIntensity: 0.8,
+            postureCause: .forwardHead,
+            blinkIntensity: 0,
+            restPhase: .idle,
+            now: t0,
+            restDuration: 20
+        )
+        XCTAssertEqual(hud.text, L("nudge.forwardHead"))
+    }
+
     func testPostureLabelWhenSlouching() {
         let hud = NudgeHUDState.derive(
             postureIntensity: 0.8,
@@ -52,7 +89,7 @@ final class NudgeHUDStateTests: XCTestCase {
         XCTAssertEqual(tie.text, L("nudge.posture"))
 
         let blinkStronger = NudgeHUDState.derive(
-            postureIntensity: 0.2,
+            postureIntensity: 0.2,  // above labelThreshold, but weaker than blink
             blinkIntensity: 0.6,
             restPhase: .idle,
             now: t0,
@@ -81,6 +118,53 @@ final class NudgeHUDStateTests: XCTestCase {
             restDuration: 20
         )
         XCTAssertEqual(hud.text, L("nudge.rest.countdown", "0:00"))
+    }
+
+    func testMovementPromptShowsWhenNothingElseActive() {
+        let hud = NudgeHUDState.derive(
+            postureIntensity: 0,
+            blinkIntensity: 0,
+            restPhase: .idle,
+            movementPhase: .prompting(startedAt: t0),
+            now: t0,
+            restDuration: 20
+        )
+        XCTAssertEqual(hud.text, L("nudge.movement"))
+    }
+
+    func testMovementYieldsToActiveWarnings() {
+        let hud = NudgeHUDState.derive(
+            postureIntensity: 0.8,
+            blinkIntensity: 0,
+            restPhase: .idle,
+            movementPhase: .prompting(startedAt: t0),
+            now: t0,
+            restDuration: 20
+        )
+        XCTAssertEqual(hud.text, L("nudge.posture"))
+    }
+
+    func testSmilePromptIsLowestPriority() {
+        let alone = NudgeHUDState.derive(
+            postureIntensity: 0,
+            blinkIntensity: 0,
+            restPhase: .idle,
+            smilePhase: .prompting(startedAt: t0),
+            now: t0,
+            restDuration: 20
+        )
+        XCTAssertEqual(alone.text, L("nudge.smile"))
+
+        let withMovement = NudgeHUDState.derive(
+            postureIntensity: 0,
+            blinkIntensity: 0,
+            restPhase: .idle,
+            movementPhase: .prompting(startedAt: t0),
+            smilePhase: .prompting(startedAt: t0),
+            now: t0,
+            restDuration: 20
+        )
+        XCTAssertEqual(withMovement.text, L("nudge.movement"))
     }
 
     func testCountdownStartsAtFullDuration() {

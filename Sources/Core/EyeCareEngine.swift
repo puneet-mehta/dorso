@@ -53,6 +53,8 @@ struct BlinkActivitySample: Equatable {
     let blinkCount: Int
     /// Fraction (0-1) of this second's frames that were valid observations.
     let validSampleRatio: Double
+    /// Smiles confirmed during this second (same landmarks pass).
+    var smileCount: Int = 0
 }
 
 // MARK: - State

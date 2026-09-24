@@ -178,6 +178,12 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
     var eyeCareConfig: EyeCareConfig {
         trackingStore.withState { $0.eyeCareConfig }
     }
+    var movementConfig: MovementConfig {
+        trackingStore.withState { $0.movementConfig }
+    }
+    var smileConfig: SmileConfig {
+        trackingStore.withState { $0.smileConfig }
+    }
 
     // Global keyboard shortcut
     var toggleShortcutEnabled = true
@@ -374,6 +380,10 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
                 AnalyticsManager.shared.recordBlinkNudge()
             case .restCompleted:
                 AnalyticsManager.shared.recordRestBreakCompleted()
+            case .movementBreak:
+                AnalyticsManager.shared.recordMovementBreak()
+            case .smile:
+                AnalyticsManager.shared.recordSmile()
             }
         }
     }
@@ -384,7 +394,8 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
             badPostureY: profile.badPostureY,
             neutralY: profile.neutralY,
             postureRange: profile.postureRange,
-            cameraID: profile.cameraID
+            cameraID: profile.cameraID,
+            neutralFaceWidth: profile.neutralFaceWidth ?? 0.0
         )
     }
 

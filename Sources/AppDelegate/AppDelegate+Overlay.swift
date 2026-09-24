@@ -113,29 +113,39 @@ extension AppDelegate {
 
     /// Derive and render the nudge HUD label from current store state.
     func updateNudgeHUD() {
-        let (restPhase, restDuration, blinkIntensity) = trackingStore.withState {
+        let (restPhase, restDuration, blinkIntensity, postureCause, movementPhase, smilePhase) = trackingStore.withState {
             ($0.eyeCareState.restPhase,
              $0.eyeCareConfig.restDurationSeconds,
-             $0.eyeCareState.blinkNudgeIntensity)
+             $0.eyeCareState.blinkNudgeIntensity,
+             $0.monitoringState.warningCause,
+             $0.movementState.phase,
+             $0.smileState.phase)
         }
         let hud = NudgeHUDState.derive(
             postureIntensity: postureWarningIntensity,
+            postureCause: postureCause,
             blinkIntensity: blinkIntensity,
             restPhase: restPhase,
+            movementPhase: movementPhase,
+            smilePhase: smilePhase,
             now: Date(),
             restDuration: restDuration
         )
         nudgeLabelManager.render(hud)
     }
 
-    /// Dispatch `.eyeCareTick` from the 0.033s render timer at most once per
-    /// wall-clock second while eye care is enabled and the app is active.
+    /// Dispatch `.wellnessTick` from the 0.033s render timer at most once
+    /// per wall-clock second while any wellness feature is enabled and the
+    /// app is active.
     func dispatchEyeCareTickIfDue() {
-        guard eyeCareConfig.eyeCareEnabled, state.isActive else { return }
+        let (movementEnabled, smileEnabled) = trackingStore.withState {
+            ($0.movementConfig.movementReminderEnabled, $0.smileConfig.smileReminderEnabled)
+        }
+        guard eyeCareConfig.eyeCareEnabled || movementEnabled || smileEnabled, state.isActive else { return }
         let now = Date()
         guard now.timeIntervalSince(lastEyeCareTickTime) >= 1.0 else { return }
         lastEyeCareTickTime = now
-        applyTrackingAction(.eyeCareTick(now: now, isMarketingMode: isMarketingMode))
+        applyTrackingAction(.wellnessTick(now: now, isMarketingMode: isMarketingMode))
     }
 
     func updateBlur() {

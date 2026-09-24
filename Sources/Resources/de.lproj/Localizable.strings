@@ -90,7 +90,7 @@
 "alert.cameraNotAvailable.message" = "Stellen Sie sicher, dass die Kamera angeschlossen und der Kamerazugriff gewährt ist.";
 "alert.tryAgain" = "Erneut versuchen";
 "support.title" = "Dorso unterstützen";
-"support.message" = "Wenn Dorso Ihnen mit Ihrer Haltung geholfen hat und Sie Ihre Unterstützung zeigen möchten, spendieren Sie mir bitte einen Kaffee.";
+"support.message" = "Wenn Dorso Ihnen zu mehr Wohlbefinden am Schreibtisch verholfen hat und Sie Ihre Unterstützung zeigen möchten, spendieren Sie mir bitte einen Kaffee.";
 "support.button" = "Spendiere mir einen Kaffee";
 
 // MARK: - Calibration (CalibrationWindow.swift)
@@ -192,9 +192,9 @@
 // MARK: - Analytics (AnalyticsWindow.swift)
 
 "analytics.title" = "Statistiken";
-"analytics.header" = "Haltungsstatistiken";
+"analytics.header" = "Wellness-Statistiken";
 "analytics.tagline" = "Verfolgen Sie Ihre Gewohnheiten und Verbesserung im Laufe der Zeit";
-"analytics.todayScore" = "Heutige Bewertung";
+"analytics.todayScore" = "Haltungswert";
 "analytics.monitoringTime" = "Überwachungszeit";
 "analytics.slouchDuration" = "Dauer schlechter Haltung";
 "analytics.slouchEvents" = "Haltungsvorfälle";
@@ -217,6 +217,7 @@
 
 "nudge.posture" = "Sitz gerade";
 "nudge.blink" = "Blinzle mit den Augen";
+"nudge.forwardHead" = "Geh etwas zurück";
 "nudge.rest.countdown" = "Schau 6 m in die Ferne — %@";
 "settings.eyeCare" = "Augenpflege";
 "settings.eyeCare.help" = "Erinnerungen zum Blinzeln und zu Augenpausen bei langen Bildschirmsitzungen. Alle Verarbeitung bleibt auf deinem Mac.";
@@ -234,3 +235,23 @@
 "settings.eyeCare.restInterval.value" = "%d Min.";
 "analytics.eyeBreaks" = "Augenpausen";
 "analytics.blinkNudges" = "Blinzel-Hinweise";
+
+// MARK: - Movement
+
+"nudge.movement" = "Zeit aufzustehen — mach einen kurzen Spaziergang";
+"settings.movement" = "Bewegung";
+"settings.movement.help" = "Erinnert dich daran, aufzustehen und dich zu bewegen, wenn du zu lange am Bildschirm sitzt. Eine Minute weg vom Platz zählt als Pause.";
+"settings.movement.enable" = "Aufsteh-Erinnerungen";
+"settings.movement.interval" = "Sitzzeit";
+"settings.movement.interval.help" = "Wie lange du am Stück sitzen kannst, bevor Dorso das Aufstehen vorschlägt.";
+"analytics.movementBreaks" = "Bewegungspausen";
+
+// MARK: - Smile
+
+"nudge.smile" = "Vergiss nicht zu lächeln 😊";
+"settings.smile" = "Lächeln";
+"settings.smile.help" = "Eine spielerische Erinnerung, ab und zu zu lächeln — Lächeln entspannt das Gesicht nach langer Konzentration. Wird auf deinem Mac erkannt, nie aufgezeichnet.";
+"settings.smile.enable" = "Lächel-Erinnerungen";
+"settings.smile.interval" = "Erinnern nach";
+"analytics.smiles" = "Lächeln";
+"calibration.invalidData" = "Die Kalibrierung hat nicht genug Kopfbewegung erfasst, um gute Haltung von Zusammensacken zu unterscheiden. Setz dich in bequemem Abstand hin und folge den Zielen mit dem Kopf — nicht nur mit den Augen — und versuche es erneut.";

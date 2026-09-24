@@ -619,6 +619,38 @@ final class AppDelegateTrackingIntegrationTests: XCTestCase {
     }
 
     @MainActor
+    func testFinishCalibrationWithTooSmallRangeRequestsRetryAndSavesNothing() async {
+        let appDelegate = AppDelegate()
+        appDelegate.syncDetectorToStateOverride = {}
+        appDelegate.cameraCalibrationRetryAlertDecision = { _ in false }
+
+        appDelegate.state = .calibrating
+        appDelegate.trackingSource = .camera
+        appDelegate.selectedCameraID = "camera-tiny-range"
+
+        var executedIntents: [TrackingFeature.EffectIntent] = []
+        appDelegate.trackingEffectIntentObserver = { intent in
+            executedIntents.append(intent)
+        }
+
+        // Nose positions spanning only ~0.006 - below the 0.01 validity
+        // floor (the head barely moved during calibration).
+        let samples: [CalibrationSample] = [
+            .camera(.init(noseY: 0.390, faceWidth: 0.2)),
+            .camera(.init(noseY: 0.392, faceWidth: 0.2)),
+            .camera(.init(noseY: 0.394, faceWidth: 0.2)),
+            .camera(.init(noseY: 0.396, faceWidth: 0.2))
+        ]
+        await appDelegate.finishCalibration(values: samples)
+
+        XCTAssertNil(appDelegate.cameraCalibration)
+        XCTAssertTrue(executedIntents.contains(
+            .showCameraCalibrationRetryAlert(message: L("calibration.invalidData"))
+        ))
+        XCTAssertNotEqual(appDelegate.state, .monitoring)
+    }
+
+    @MainActor
     func testCalibrationAuthorizationDeniedWithOpenSettingsDecisionExecutesOpenSettingsIntent() async {
         let appDelegate = AppDelegate()
         appDelegate.syncDetectorToStateOverride = {}

@@ -90,7 +90,7 @@
 "alert.cameraNotAvailable.message" = "カメラが接続されていること、カメラへのアクセスが許可されていることを確認してください。";
 "alert.tryAgain" = "再試行";
 "support.title" = "Dorsoを応援";
-"support.message" = "Dorsoが姿勢の改善に役立ち、応援したいと思っていただけたら、コーヒーをごちそうしてください。";
+"support.message" = "Dorsoがデスクでの快適さに役立ち、応援したいと思っていただけたら、コーヒーをごちそうしてください。";
 "support.button" = "コーヒーをおごる";
 
 // MARK: - Calibration (CalibrationWindow.swift)
@@ -192,9 +192,9 @@
 // MARK: - Analytics (AnalyticsWindow.swift)
 
 "analytics.title" = "統計";
-"analytics.header" = "姿勢の統計";
+"analytics.header" = "ウェルネス統計";
 "analytics.tagline" = "習慣と改善を追跡しましょう";
-"analytics.todayScore" = "今日のスコア";
+"analytics.todayScore" = "姿勢スコア";
 "analytics.monitoringTime" = "モニタリング時間";
 "analytics.slouchDuration" = "姿勢悪化の時間";
 "analytics.slouchEvents" = "姿勢悪化の回数";
@@ -217,6 +217,7 @@
 
 "nudge.posture" = "姿勢を正しましょう";
 "nudge.blink" = "まばたきをしましょう";
+"nudge.forwardHead" = "少し画面から離れましょう";
 "nudge.rest.countdown" = "6m先を見ましょう — %@";
 "settings.eyeCare" = "アイケア";
 "settings.eyeCare.help" = "長時間の画面作業中に、まばたきや目の休憩を促します。すべての処理はMac上で完結します。";
@@ -234,3 +235,23 @@
 "settings.eyeCare.restInterval.value" = "%d分";
 "analytics.eyeBreaks" = "目の休憩";
 "analytics.blinkNudges" = "まばたき通知";
+
+// MARK: - Movement
+
+"nudge.movement" = "立ち上がりましょう — 少し歩きましょう";
+"settings.movement" = "運動";
+"settings.movement.help" = "画面の前に長く座りすぎたときに、立ち上がって体を動かすよう促します。1分間席を離れると休憩としてカウントされます。";
+"settings.movement.enable" = "立ち上がりリマインダー";
+"settings.movement.interval" = "着席時間";
+"settings.movement.interval.help" = "Dorsoが立ち上がりを提案するまでの連続着席時間。";
+"analytics.movementBreaks" = "運動休憩";
+
+// MARK: - Smile
+
+"nudge.smile" = "笑顔を忘れずに 😊";
+"settings.smile" = "スマイル";
+"settings.smile.help" = "ときどき笑顔になるための遊び心のあるリマインダー。長時間の集中の後、笑顔は顔をリラックスさせます。Mac上で検出され、記録されることはありません。";
+"settings.smile.enable" = "スマイルリマインダー";
+"settings.smile.interval" = "リマインド間隔";
+"analytics.smiles" = "スマイル";
+"calibration.invalidData" = "キャリブレーションで頭の動きが十分に検出できず、良い姿勢と猫背を区別できません。快適な距離に座り、目だけでなく頭を動かしてターゲットを追い、もう一度お試しください。";

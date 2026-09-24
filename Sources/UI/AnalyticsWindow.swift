@@ -124,6 +124,20 @@ struct AnalyticsView: View {
                         icon: "eye.trianglebadge.exclamationmark",
                         color: .purple
                     )
+
+                    AnalyticsStatCard(
+                        title: L("analytics.movementBreaks"),
+                        value: "\(manager.todayStats.movementBreaksCompleted)",
+                        icon: "figure.walk",
+                        color: .mint
+                    )
+
+                    AnalyticsStatCard(
+                        title: L("analytics.smiles"),
+                        value: "\(manager.todayStats.smileCount)",
+                        icon: "face.smiling",
+                        color: .yellow
+                    )
                 }
                 .frame(width: 180)
 

@@ -4,6 +4,29 @@ import AVFoundation
 
 final class CameraPostureDetectorTests: XCTestCase {
 
+    // MARK: - Baseline Re-anchoring
+
+    func testAnchorOffsetIsMedianRelativeToCalibratedUpright() {
+        let offset = CameraPostureDetector.anchorOffset(
+            samples: [0.57, 0.58, 0.575, 0.60, 0.565, 0.57, 0.58, 0.575],
+            goodPostureY: 0.411
+        )
+        // Median 0.575 - 0.411
+        XCTAssertEqual(offset, 0.164, accuracy: 0.0001)
+    }
+
+    func testAnchorOffsetZeroWhenSittingWhereCalibrated() {
+        let offset = CameraPostureDetector.anchorOffset(
+            samples: [0.41, 0.412, 0.411, 0.409],
+            goodPostureY: 0.411
+        )
+        XCTAssertEqual(offset, 0, accuracy: 0.002)
+    }
+
+    func testAnchorOffsetEmptySamplesIsZero() {
+        XCTAssertEqual(CameraPostureDetector.anchorOffset(samples: [], goodPostureY: 0.5), 0)
+    }
+
     // MARK: - createCalibrationData: Valid Samples
 
     func testCreateCalibrationDataWithExactly4Samples() {

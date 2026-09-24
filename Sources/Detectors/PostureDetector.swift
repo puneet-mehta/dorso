@@ -3,11 +3,21 @@ import AppKit
 
 // MARK: - Posture Reading
 
+/// What kind of bad posture a reading represents, so nudges can name the
+/// right correction ("sit up straight" vs "move back from the screen").
+enum PostureWarningCause: Equatable {
+    /// Head dropped below the calibrated baseline (slouching down).
+    case slouch
+    /// Face grew relative to calibration (leaning toward the screen).
+    case forwardHead
+}
+
 /// Represents a single posture measurement from any detection source
 struct PostureReading: Equatable {
     let timestamp: Date
     let isBadPosture: Bool
     let severity: Double  // 0.0 (good) to 1.0 (very bad)
+    var cause: PostureWarningCause = .slouch
 
     static let good = PostureReading(timestamp: Date(), isBadPosture: false, severity: 0)
 }
@@ -60,8 +70,6 @@ struct CameraCalibrationData: CalibrationData {
     static let forwardHeadBaseThreshold: CGFloat = 0.05
     /// Range over which severity scales from 0 to 1 (beyond threshold)
     static let forwardHeadSeverityRange: CGFloat = 0.15
-    /// Minimum severity when forward-head posture is detected
-    static let forwardHeadMinSeverity: Double = 0.5
 }
 
 /// AirPods motion calibration profile

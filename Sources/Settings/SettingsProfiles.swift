@@ -10,6 +10,10 @@ struct ProfileData: Codable, Equatable {
     let neutralY: CGFloat
     let postureRange: CGFloat
     let cameraID: String
+    /// Optional so profiles saved before forward-head detection existed
+    /// still decode; without it, forward-head detection is off after a
+    /// relaunch until the next calibration.
+    var neutralFaceWidth: CGFloat? = nil
 }
 
 // MARK: - Settings Profile
