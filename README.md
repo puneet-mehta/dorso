@@ -1,8 +1,10 @@
 # [Dorso](https://dorso.app/)
 
-**A macOS app that blurs your screen when you slouch.**
+**A macOS wellness companion for long days at the desk — posture, eyes, movement, and the occasional smile.**
 
 Dorso monitors your posture in real-time using either your Mac's camera or AirPods motion sensors. When it detects that you're slouching, it progressively blurs your screen to remind you to sit up straight. Maintain good posture, and the blur clears instantly.
+
+Beyond posture, Dorso can watch for screen-strain habits: it notices when you stare without blinking, reminds you to rest your eyes (20-20-20), suggests standing up after too much sitting, and even nudges you to smile now and then. Every feature is opt-in and all processing happens on your Mac.
 
 [![Download on the App Store](https://toolbox.marketingtools.apple.com/api/v2/badges/download-on-the-app-store/black/en-us?releaseDate=1769990400)](https://apps.apple.com/us/app/posturr-posture-monitor/id6758276540?mt=12)
 
@@ -32,6 +34,10 @@ Dorso monitors your posture in real-time using either your Mac's camera or AirPo
 ## Features
 
 - **Two tracking methods** - Use your camera (Vision framework) or AirPods motion sensors
+- **Eye care** - Blink reminders when you stare at the screen, plus 20-20-20 rest breaks with a countdown
+- **Movement breaks** - Stand-up reminders after too much continuous sitting; stepping away counts as a break
+- **Smile reminders** - A playful nudge when you haven't smiled in a while, with a daily smile count
+- **Cause-labeled nudges** - A small on-screen hint says what to fix: "Sit up straight", "Blink your eyes", "Move back a bit"
 - **AirPods motion tracking** - Track posture without camera using AirPods Pro, Max, or 3rd gen+ (macOS 14+)
 - **Progressive screen blur** - Gentle visual reminder that intensifies with worse posture
 - **Menu bar controls** - Easy access to settings, calibration, and status from the menu bar

@@ -1,14 +1,16 @@
-# Dorso Eye Care preview
+# Dorso Wellness preview
 
-Preview build of the `feat/eye-care` branch — Dorso with eye-strain protection on top of the existing posture guarding. Updated automatically on every push to the branch.
+Preview build of the `feat/eye-care` branch — Dorso grown into a desk-wellness companion: posture, eyes, movement, and smiles. Updated automatically on every push to the branch.
 
 ## What's in it
 
 - **Blink reminders** (camera mode) — notices when you stare at the screen without blinking and shows a gentle nudge using your configured warning style. Auto-calibrates to your eyes, glasses, and lighting; goes quiet instead of false-firing in poor conditions. Sensitivity is adjustable.
-- **Cause-labeled nudges** — a small on-screen hint tells you *what* to fix: "Sit up straight", "Blink your eyes", or the rest countdown. Localized in English, German, Spanish, French, Japanese, and Simplified Chinese.
 - **20-20-20 breaks** — after 20 minutes (configurable 10–40) of continuous screen time, a countdown prompts you to look 20 ft away for 20 seconds. Walking away counts as taking the break.
-- **Analytics** — the dashboard now shows Eye Breaks and Blink Nudges alongside posture stats.
-- Eye Care is **opt-in**: enable it in Settings after installing.
+- **Movement breaks** — stand-up reminders after too much continuous sitting (configurable 15–120 min); stepping away for a minute counts as the break.
+- **Smile reminders** — a playful nudge when you haven't smiled in a while (configurable 5–120 min), with a daily smile count.
+- **Cause-labeled nudges** — a small on-screen hint tells you *what* to fix: "Sit up straight", "Move back a bit", "Blink your eyes", the rest countdown, and more. Localized in English, German, Spanish, French, Japanese, and Simplified Chinese.
+- **Analytics** — the dashboard shows Eye Breaks, Blink Nudges, Movement Breaks, and Smiles alongside posture stats.
+- Every wellness feature is **opt-in**: enable them in Settings after installing.
 - This build has **no auto-updater and makes no network requests at all** — everything runs on your Mac.
 
 ## Install
